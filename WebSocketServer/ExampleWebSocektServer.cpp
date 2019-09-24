@@ -13,11 +13,14 @@
 //
 //------------------------------------------------------------------------------
 #define _CRT_SECURE_NO_WARNINGS
+#define BOOST_SPIRIT_THREADSAFE
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/date_time.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -28,6 +31,7 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <sstream>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -37,7 +41,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 //------------------------------------------------------------------------------
 
-std::string GetNow() {
+static std::string GetNow() {
 
 	std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 	std::string s(24, '\0');
@@ -46,45 +50,110 @@ std::string GetNow() {
 	return s;
 }
 
-// Report a failure
-void
-fail(beast::error_code ec, char const* what)
-{
-	std::cerr << GetNow() << "  " << what << ": " << ec.message() << "\n";
+static uint64_t GetNowEpoch() {
+	return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void custom_fail(char const* what) {
-	std::cerr << GetNow() << "  " << what << "\n";
+template<typename T>
+void custom_fail(char const* what, T& err) {
+	std::cerr << GetNow() << what << ": " << err.message() << "\n";
+}
+
+// Report a failure
+void beast_fail(beast::error_code ec, char const* what)
+{
+	custom_fail(what, ec);
+	//std::cerr << GetNow() << what << ": " << ec.message() << "\n";
+}
+
+void custom_log(const char* format) // base function
+{
+	std::cout << format;
+}
+
+template<typename T, typename... TArgs>
+void custom_log(const char* fmt, T value, TArgs... args) {
+	while (*fmt != '\0') {
+		if (*fmt == '%') {
+			std::cout << value;
+			custom_log(fmt + 2, args...);
+			return; 
+		}
+		std::cout << *fmt;
+		++fmt;
+	}
 }
 
 void log(char const* content) {
 	std::cout << GetNow() << content << std::endl;
 }
 
+void fail(char const* content) {
+	std::cout << GetNow();
+	custom_log("Error: %s\n", content);
+}
+
+
+
 // Echoes back all received WebSocket messages
 class session : public std::enable_shared_from_this<session>
 {
+	/*
+	Transaction session flow
+	  Client			  Server
+		|					|
+		|	    Open		|
+		|------------------>|
+		|    Send Token		|
+		|------------------>|
+		|	Send Response	|
+		|<------------------|
+		|					|_______________
+		| Start Send Data	|				|
+		|------------------>|				| 
+		|	 Echo Data		|				|
+		|<------------------|				|
+		|					|  Transaction	|
+		| Send Keep-alive	|				|
+		|------------------>|				|
+		|		...			|				|
+		|		...			|				|
+		|					|_______________|
+		|	Close Session	|
+		|<----------------->|
+		|					|
+	*/
 	websocket::stream<beast::tcp_stream> ws_;
-	beast::flat_buffer buffer_;
+	beast::flat_buffer read_buffer_;
+	std::string write_data_;
+
+	boost::asio::io_context& io_cotext_;
+	boost::asio::steady_timer timer_;
 
 	bool is_authenticated_;
+
+	bool is_connected_;
+	uint64_t lastAliveMsg_;
 
 public:
 	// Take ownership of the socket
 	explicit
-		session(tcp::socket&& socket)
+		session(tcp::socket&& socket, boost::asio::io_context& ioc)
 		: ws_(std::move(socket))
+		, io_cotext_(ioc)
+		, timer_(ioc)
 		, is_authenticated_(false)
+		, lastAliveMsg_(GetNowEpoch())
 	{
 	}
 
 	~session() {
+		timer_.cancel();
 		log("Connection closed");
 	}
 
 	// Start the asynchronous operation
-	void
-		run()
+	void run()
 	{
 		// Set suggested timeout settings for the websocket
 		ws_.set_option(
@@ -105,31 +174,80 @@ public:
 			beast::bind_front_handler(
 				&session::on_accept,
 				shared_from_this()));
+
 	}
 
-	void
-		on_accept(beast::error_code ec)
+	void on_accept(beast::error_code ec)
 	{
 		if (ec)
-			return fail(ec, "accept");
+			return beast_fail(ec, "accept");
 
-		// Read a message
-		do_read();
+		alive_check();
+
+		// Read first token message
+		do_read_token();
 	}
 
-	void
-		do_read()
+	void do_read()
 	{
 		// Read a message into our buffer
 		ws_.async_read(
-			buffer_,
+			read_buffer_,
 			beast::bind_front_handler(
 				&session::on_read,
 				shared_from_this()));
 	}
 
-	void
-		on_read(
+	void do_read_token() {
+		ws_.async_read(
+			read_buffer_,
+			beast::bind_front_handler(
+				&session::on_read_token,
+				shared_from_this()));
+	}
+
+	void do_write() {
+		ws_.text(true);
+		ws_.async_write(
+			boost::asio::buffer(write_data_),
+			beast::bind_front_handler(
+				&session::on_write,
+				shared_from_this()));
+	}
+
+	void do_write_response(unsigned short status_code) {
+		boost::property_tree::ptree tree;
+		switch (status_code) {
+		case 200:
+			tree.add("status_code", "200");
+			tree.add("message", "OK");
+			break;
+		case 401:
+			tree.add("status_code", "401");
+			tree.add("message", "Unauthorized");
+			break;
+		default:
+			tree.add("status_code", "400");
+			tree.add("message", "Bad Request");
+		}
+
+		try {
+			std::stringstream ss;
+			boost::property_tree::json_parser::write_json(ss, tree);
+			write_data_ = ss.str();
+
+			ws_.text(true);
+			ws_.async_write(
+				boost::asio::buffer(write_data_),
+				beast::bind_front_handler(
+					&session::on_write_response,
+					shared_from_this()));
+		}
+		catch (...) {
+		}
+	}
+
+	void on_read(
 			beast::error_code ec,
 			std::size_t bytes_transferred)
 	{
@@ -139,45 +257,101 @@ public:
 		if (ec == websocket::error::closed)
 			return;
 
-		if (ec)
-			fail(ec, "read");
-
-		if (!is_authenticated_) {
-			// Check token
-			std::string data = beast::buffers_to_string(buffer_.data());
-			if (0 != data.compare(R"(C124654DE1458)")) {
-				custom_fail("Invalid token");
-				return;
-			}
-			//send_response("200","OK");
-			is_authenticated_ = true;
+		if (ec) {
+			beast_fail(ec, "read");
 		}
 
-		log(beast::buffers_to_string(buffer_.data()).c_str());
+		std::string received_data = beast::buffers_to_string(read_buffer_.data());
+		log(received_data.c_str());
+
+		// Clear the buffer
+		read_buffer_.consume(read_buffer_.size());
+
+		std::stringstream ss(received_data);
+		boost::property_tree::ptree tree;
+		boost::property_tree::json_parser::read_json(ss, tree);
+		try{
+			// filter alive message
+			uint64_t timestamp = tree.get<uint64_t>("timestamp");
+			lastAliveMsg_ = timestamp;
+		}
+		catch (...) {
+			// message 
+			write_data_ = std::move(received_data);
+		}
+
 		// Echo the message
-		ws_.text(ws_.got_text());
-		ws_.async_write(
-			buffer_.data(),
-			beast::bind_front_handler(
-				&session::on_write,
-				shared_from_this()));
+		do_write();
 	}
 
-	void
-		on_write(
+	void on_write(
 			beast::error_code ec,
 			std::size_t bytes_transferred)
 	{
 		boost::ignore_unused(bytes_transferred);
 
 		if (ec)
-			return fail(ec, "write");
-
-		// Clear the buffer
-		buffer_.consume(buffer_.size());
+			return beast_fail(ec, "write");	
 
 		// Do another read
 		do_read();
+	}
+
+	void on_read_token(
+			beast::error_code ec,
+			std::size_t bytes_transferred) {
+		try {
+			// Check validation of token
+			std::string data = beast::buffers_to_string(read_buffer_.data());
+
+			std::stringstream ss(data);
+			boost::property_tree::ptree pTree;
+			boost::property_tree::json_parser::read_json(ss, pTree);
+
+			std::string token = pTree.get<std::string>("token");
+			if (0 != token.compare(R"(C124654DE1458)")) {
+				fail("Invalid token");
+				do_write_response(401);
+			}
+			else {
+				do_write_response(200);
+				is_authenticated_ = true;
+			}
+		}
+		catch (boost::property_tree::json_parser::json_parser_error& ec) {
+			custom_fail("Invalid token format", ec);
+			do_write_response(400);
+		}
+		// Clear the buffer
+		read_buffer_.consume(read_buffer_.size());
+	}
+
+	void on_write_response(
+			beast::error_code ec,
+			std::size_t bytes_transferred) {
+		if (is_authenticated_) {
+			do_read();
+		}
+	}
+
+	void alive_check() {
+		timer_.expires_from_now(std::chrono::seconds(10));
+		timer_.async_wait([this](boost::system::error_code ec) {
+			if (ec) {
+				custom_fail("alive check", ec);
+				return;
+			}
+
+			if (GetNowEpoch() - lastAliveMsg_ >= 15) {
+				ws_.close(beast::websocket::close_reason("time out"), ec);
+				if (ec) {
+					custom_fail("close web socket", ec);
+				}
+				return;
+			}
+
+			alive_check();
+		});
 	}
 };
 
@@ -202,7 +376,7 @@ public:
 		acceptor_.open(endpoint.protocol(), ec);
 		if (ec)
 		{
-			fail(ec, "open");
+			beast_fail(ec, "open");
 			return;
 		}
 
@@ -210,7 +384,7 @@ public:
 		acceptor_.set_option(net::socket_base::reuse_address(true), ec);
 		if (ec)
 		{
-			fail(ec, "set_option");
+			beast_fail(ec, "set_option");
 			return;
 		}
 
@@ -218,7 +392,7 @@ public:
 		acceptor_.bind(endpoint, ec);
 		if (ec)
 		{
-			fail(ec, "bind");
+			beast_fail(ec, "bind");
 			return;
 		}
 
@@ -227,7 +401,7 @@ public:
 			net::socket_base::max_listen_connections, ec);
 		if (ec)
 		{
-			fail(ec, "listen");
+			beast_fail(ec, "listen");
 			return;
 		}
 	}
@@ -256,13 +430,13 @@ private:
 	{
 		if (ec)
 		{
-			fail(ec, "accept");
+			beast_fail(ec, "accept");
 		}
 		else
 		{
 			log("Client connected!");
 			// Create the session and run it
-			std::make_shared<session>(std::move(socket))->run();
+			std::make_shared<session>(std::move(socket), ioc_)->run();
 		}
 
 		// Accept another connection

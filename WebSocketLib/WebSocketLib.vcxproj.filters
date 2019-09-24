@@ -27,5 +27,11 @@
     <ClInclude Include="WSSession.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WSListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WSUtility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -32,12 +32,21 @@ namespace websocket {
 	}
 
 	template<typename T, typename... Targs>
-	void tprintf(const char* format, T value, Targs... Fargs)
+	void log(const char* format, T value, Targs... Fargs)
 	{
+		//  Call stack:
+		// 	log("% world% %\n", "Hello", '!', 123);
+		//  Output -> "Hello"
+		// 	log(" world% %\n", '!', 123);
+		//	Output -> "Hello world" -> "Hello world!"
+		// 	log(" %\n", 123);
+		//	Output -> "Hello world! " -> "Hello world! 123"
+		// 	log(" \n");
+		//	Output -> "Hello world! " -> "Hello world! 123 \n"
 		for (; *format != '\0'; format++) {
 			if (*format == '%') {
 				std::cout << value;
-				tprintf(format + 1, Fargs...);
+				log(format + 1, Fargs...);
 				return;
 			}
 			std::cout << *format;
