@@ -20,6 +20,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/date_time.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
 #include <algorithm>
@@ -99,7 +100,8 @@ void fail(char const* content) {
 class session : public std::enable_shared_from_this<session>
 {
 	/*
-	Transaction session flow
+	   Transaction session flow
+
 	  Client			  Server
 		|					|
 		|	    Open		|
@@ -259,29 +261,23 @@ public:
 
 		if (ec) {
 			beast_fail(ec, "read");
+			return;
 		}
 
 		std::string received_data = beast::buffers_to_string(read_buffer_.data());
 		log(received_data.c_str());
 
 		// Clear the buffer
-		read_buffer_.consume(read_buffer_.size());
-
-		std::stringstream ss(received_data);
-		boost::property_tree::ptree tree;
-		boost::property_tree::json_parser::read_json(ss, tree);
-		try{
-			// filter alive message
-			uint64_t timestamp = tree.get<uint64_t>("timestamp");
-			lastAliveMsg_ = timestamp;
-		}
-		catch (...) {
-			// message 
-			write_data_ = std::move(received_data);
-		}
+		read_buffer_.consume(read_buffer_.size());	
+		
+		// message 
+		write_data_ = std::move(received_data);
 
 		// Echo the message
 		do_write();
+
+		// Update last message time
+		lastAliveMsg_ = GetNowEpoch();
 	}
 
 	void on_write(
@@ -290,8 +286,10 @@ public:
 	{
 		boost::ignore_unused(bytes_transferred);
 
-		if (ec)
-			return beast_fail(ec, "write");	
+		if (ec) {
+			beast_fail(ec, "write");
+			return;
+		}
 
 		// Do another read
 		do_read();
@@ -338,7 +336,6 @@ public:
 		timer_.expires_from_now(std::chrono::seconds(10));
 		timer_.async_wait([this](boost::system::error_code ec) {
 			if (ec) {
-				custom_fail("alive check", ec);
 				return;
 			}
 
@@ -362,6 +359,7 @@ class listener : public std::enable_shared_from_this<listener>
 {
 	net::io_context& ioc_;
 	tcp::acceptor acceptor_;
+	tcp::endpoint endpoint_;
 
 public:
 	listener(
@@ -369,15 +367,20 @@ public:
 		tcp::endpoint endpoint)
 		: ioc_(ioc)
 		, acceptor_(ioc)
+		, endpoint_(endpoint)
 	{
+		
+	}
+
+	bool init() {
 		beast::error_code ec;
 
 		// Open the acceptor
-		acceptor_.open(endpoint.protocol(), ec);
+		acceptor_.open(endpoint_.protocol(), ec);
 		if (ec)
 		{
 			beast_fail(ec, "open");
-			return;
+			return false;
 		}
 
 		// Allow address reuse
@@ -385,15 +388,15 @@ public:
 		if (ec)
 		{
 			beast_fail(ec, "set_option");
-			return;
+			return false;
 		}
 
 		// Bind to the server address
-		acceptor_.bind(endpoint, ec);
+		acceptor_.bind(endpoint_, ec);
 		if (ec)
 		{
 			beast_fail(ec, "bind");
-			return;
+			return false;
 		}
 
 		// Start listening for connections
@@ -402,15 +405,19 @@ public:
 		if (ec)
 		{
 			beast_fail(ec, "listen");
-			return;
+			return false;
 		}
+		return true;
 	}
 
 	// Start accepting incoming connections
-	void
-		run()
+	bool run()
 	{
+		if (!init()) {
+			return false;
+		}
 		do_accept();
+		return true;
 	}
 
 private:
@@ -449,30 +456,55 @@ private:
 int main(int argc, char* argv[])
 {
 	// Check command line arguments.
-	if (argc != 4)
+	/*if (argc != 4)
 	{
 		std::cerr <<
 			"Usage: websocket-server-async <address> <port> <threads>\n" <<
 			"Example:\n" <<
 			"    websocket-server-async 0.0.0.0 8080 1\n";
 		return EXIT_FAILURE;
-	}
+	}*/
 
 	try {
-		auto const address = net::ip::make_address(argv[1]);
-		auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
-		auto const threads = std::max<int>(1, std::atoi(argv[3]));
+		// Read ini file
+		std::ifstream ifs;
+		ifs.open("config.ini", std::ios::binary | std::ios::in);
+		if (!ifs) {
+			std::cerr <<
+				"Please ensure config.ini was placed at same directory with WebSocketServer.exe\n";
+			return EXIT_FAILURE;
+		}
+		ifs.close();
+
+		boost::property_tree::ptree tree;
+		boost::property_tree::ini_parser::read_ini("config.ini", tree);
+
+		std::string addressStr = tree.get<std::string>("Listen.Address");
+		std::string portStr = tree.get<std::string>("Listen.Port");
+		std::string threadsStr = tree.get<std::string>("Listen.Threads");
+		auto const address = net::ip::make_address(addressStr.c_str());
+		auto const port = static_cast<unsigned int>(std::atoi(portStr.c_str()));
+		auto const threads = std::max<int>(1, std::atoi(threadsStr.c_str()));
 	
-		printf("Server started!!\nlisten address=%s, port=%s\n", argv[1], argv[2]);
+		if (port < 0 || port >= 65535) {
+			fail("Invalid listen port");
+			return EXIT_FAILURE;
+		}
 
 		// The io_context is required for all I/O
 		net::io_context ioc{ threads };
 
 		// Create and launch a listening port
-		std::make_shared<listener>(ioc, tcp::endpoint{ address, port })->run();
+		auto ret = std::make_shared<listener>(ioc, tcp::endpoint{ address, static_cast<unsigned short>(port) })->run();
+		if (!ret) {
+			fail("Listen port was used by other process");
+			return EXIT_FAILURE;
+		}
+		printf("WebSocket server started!!\nlisten address=%s, port=%s\n", addressStr.c_str(), portStr.c_str());
 
 		// Run the I/O service on the requested number of threads
 		std::vector<std::thread> v;
+
 		v.reserve(threads - 1);
 		for (auto i = threads - 1; i > 0; --i)
 			v.emplace_back(
