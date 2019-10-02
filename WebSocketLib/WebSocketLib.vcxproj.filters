@@ -13,25 +13,37 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\network">
+      <UniqueIdentifier>{c4cbbb5f-e5f0-4877-bc5a-35b10a161a26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utility">
+      <UniqueIdentifier>{a2687cf6-d8f5-49c0-8c47-380f5538d0f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="WSDefinition.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="WSListener.h">
+      <Filter>Header Files\network</Filter>
+    </ClInclude>
+    <ClInclude Include="WSSession.h">
+      <Filter>Header Files\network</Filter>
     </ClInclude>
     <ClInclude Include="WSClient.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WSDefinition.h">
+      <Filter>Header Files\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="WSUtility.h">
+      <Filter>Header Files\utility</Filter>
+    </ClInclude>
     <ClInclude Include="WSServer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WSSession.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="WSServerSession.h">
+      <Filter>Header Files\network</Filter>
     </ClInclude>
-    <ClInclude Include="WSListener.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WSUtility.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="WSClientSession.h">
+      <Filter>Header Files\network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

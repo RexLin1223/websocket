@@ -1,8 +1,24 @@
 #pragma once
 #include <functional>
+#include <memory>
+#include <string>
+#include <boost/beast.hpp>
+#include <boost/asio.hpp>
 
 namespace websocket {
-	enum ErrorType {
+	template<typename T> using OnConnectionCompleted =
+		std::function<void(std::shared_ptr<T>)>;
+
+	template<typename T> using AsyncReadHandler = 
+		std::function<void(boost::beast::error_code, 
+			std::size_t, std::string&&, 
+			std::shared_ptr<T>)>;
+
+	template<typename T> using AsyncWriteHandler = 
+		std::function<void(boost::beast::error_code,
+		std::size_t, std::shared_ptr<T>)>;
+
+	/*enum ErrorType {
 		NormalClose = 1000,
 		EndPointClose = 1001,
 		ProtocolError = 1002,
@@ -31,7 +47,5 @@ namespace websocket {
 		const char* data;
 		unsigned int dataLength;
 		ErrorType error;
-	};
-
-	template<typename T> using CallbackHandler = std::function<void(const T data)>;
+	};*/
 }

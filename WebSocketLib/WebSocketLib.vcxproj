@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="WSClientSession.h" />
     <ClInclude Include="WSListener.h" />
+    <ClInclude Include="WSServerSession.h" />
     <ClInclude Include="WSSession.h" />
     <ClInclude Include="WSDefinition.h" />
     <ClInclude Include="WSClient.hpp" />

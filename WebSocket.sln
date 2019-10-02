@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebSocketLib", "WebSocketLi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebSocketServer", "WebSocketServer\WebSocketServer.vcxproj", "{FD914F7C-5104-404C-9A1B-6B2590071E8D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebSocketLibTester", "WebSocketLibTester\WebSocketLibTester.vcxproj", "{B0A3841C-DA3F-4D93-A828-018328B259C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{FD914F7C-5104-404C-9A1B-6B2590071E8D}.Release|x64.Build.0 = Release|x64
 		{FD914F7C-5104-404C-9A1B-6B2590071E8D}.Release|x86.ActiveCfg = Release|Win32
 		{FD914F7C-5104-404C-9A1B-6B2590071E8D}.Release|x86.Build.0 = Release|Win32
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Debug|x64.ActiveCfg = Debug|x64
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Debug|x64.Build.0 = Debug|x64
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Debug|x86.ActiveCfg = Debug|Win32
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Debug|x86.Build.0 = Debug|Win32
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Release|x64.ActiveCfg = Release|x64
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Release|x64.Build.0 = Release|x64
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Release|x86.ActiveCfg = Release|Win32
+		{B0A3841C-DA3F-4D93-A828-018328B259C7}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
