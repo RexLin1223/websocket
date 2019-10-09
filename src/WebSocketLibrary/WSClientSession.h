@@ -3,18 +3,18 @@
 #include <boost/lexical_cast.hpp>
 
 namespace websocket {
-	class WSClientSession : public WSSession {
+	class client_tcp_session : public tcp_session {
 		boost::asio::ip::tcp::resolver resolver_;
 		std::string host_;
 		std::string port_;
 
-		OnConnectionCompleted<WSSession> connected_handler_;
+		OnConnectionCompleted<tcp_session> connected_handler_;
 	public: 
-		explicit WSClientSession(
+		explicit client_tcp_session(
 			boost::asio::io_context& ioc,
 			const std::string& host,
 			const std::string& port)
-			: WSSession(ioc)
+			: tcp_session(ioc)
 			, resolver_(boost::asio::make_strand(ioc))
 			, host_(host)
 			, port_(port)
@@ -22,12 +22,12 @@ namespace websocket {
 
 		}
 
-		void run(const OnConnectionCompleted<WSSession>& handler) {
+		void run(const OnConnectionCompleted<tcp_session>& handler) {
 			connected_handler_ = std::move(handler);
 
 			// Look up the domain name
 			resolver_.async_resolve(host_, port_,
-				std::bind(&WSClientSession::on_resolve, 
+				std::bind(&client_tcp_session::on_resolve, 
 					this, std::placeholders::_1, std::placeholders::_2));
 		}
 	private:
@@ -45,7 +45,7 @@ namespace websocket {
 
 			// Make the connection on the IP address we get from a lookup
 			boost::beast::get_lowest_layer(ws_).async_connect(
-				results, std::bind(&WSClientSession::on_connect, this,
+				results, std::bind(&client_tcp_session::on_connect, this,
 					std::placeholders::_1, std::placeholders::_2));
 		}
 
@@ -75,7 +75,7 @@ namespace websocket {
 
 			// Perform the websocket handshake
 			ws_.async_handshake(host_, "/",
-				std::bind(&WSClientSession::on_handshake, this,
+				std::bind(&client_tcp_session::on_handshake, this,
 					std::placeholders::_1));
 		}
 

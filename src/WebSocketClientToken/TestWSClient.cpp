@@ -1,4 +1,4 @@
 #include "WSClient.h"
 int main() {
-	websocket::WSClient client;
+	websocket::WSClient client("wsserver.com", 8080);
 }

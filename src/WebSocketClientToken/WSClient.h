@@ -38,7 +38,7 @@ namespace websocket {
 		bool is_connected_;
 		std::string token_;
 
-		std::shared_ptr<WSClientSession> session_;
+		std::shared_ptr<client_tcp_session> session_;
 
 		std::string host_;
 		unsigned short port_;
@@ -56,7 +56,7 @@ namespace websocket {
 		}
 
 		void connect() {
-			session_ =  std::make_shared<WSClientSession>(
+			session_ =  std::make_shared<client_tcp_session>(
 				io_context_, host_, boost::lexical_cast<std::string>(port_));
 
 			if (!session_) {
@@ -78,7 +78,7 @@ namespace websocket {
 			token_ = token;
 		}
 	private:
-		void on_handshake_completed(std::shared_ptr<WSSession> session) {
+		void on_handshake_completed(std::shared_ptr<tcp_session> session) {
 			session->send(get_token_message(),
 				std::bind(&WSClient::on_send_token, this,
 					std::placeholders::_1, 
@@ -89,7 +89,7 @@ namespace websocket {
 		void on_send_token(
 			boost::beast::error_code ec, 
 			std::size_t bytes_transferred,
-			std::shared_ptr<WSSession> session) {
+			std::shared_ptr<tcp_session> session) {
 			if (ec) {
 				exception_log("send token", ec);
 				disconnect();
@@ -100,7 +100,7 @@ namespace websocket {
 		void on_token_response(boost::beast::error_code ec,
 			std::size_t bytes_transferred,
 			std::string&& received_data,
-			std::shared_ptr<WSSession> session) {
+			std::shared_ptr<tcp_session> session) {
 			// Parse send token result
 			boost::property_tree::ptree tree;
 			std::stringstream ss(received_data);
