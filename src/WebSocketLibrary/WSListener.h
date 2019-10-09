@@ -49,7 +49,7 @@ namespace websocket {
 				return false;
 			}
 
-			do_accept();
+			do_accept();			
 			return true;
 		}
 
@@ -106,12 +106,13 @@ namespace websocket {
 		
 		void do_accept()
 		{
+			auto self = Listener<server_session_type, base_session_type>::shared_from_this();
 			// The new connection gets its own strand
 			acceptor_->async_accept(
 				boost::asio::make_strand(ioc_),
 				boost::beast::bind_front_handler(
 					&Listener::on_accept,
-					Listener<server_session_type, base_session_type>::shared_from_this()));
+					self));
 		}
 
 		void on_accept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket)

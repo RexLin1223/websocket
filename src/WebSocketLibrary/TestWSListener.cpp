@@ -29,6 +29,8 @@ public:
 
 		listener_->set_channel(channel);
 		listener_->run();
+		websocket::log("Server started!\tlisten port=%d!", endpoint_.port());
+
 		io_context_.run();
 
 		return true;

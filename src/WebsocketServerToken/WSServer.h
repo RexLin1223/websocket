@@ -34,6 +34,16 @@ namespace websocket {
 		|					|
 	*/
 
+	struct ssl_config {
+		// method
+		boost::asio::ssl::context_base::method method;
+
+		// certificate
+		const char* certificate_file_path;
+		const char* private_key_file_path;
+		boost::asio::ssl::context::file_format file_format;
+	};
+
 	template<typename server_session_type, typename base_session_type>
 	class WSServerToken{
 		std::shared_ptr<Listener<server_session_type, base_session_type>> listener_;
@@ -42,14 +52,18 @@ namespace websocket {
 
 		bool is_authenticated_;
 		std::string token_;
+		std::unique_ptr<ssl_config> ssl_config_;
 
 		ThreadGroup thread_group_;
 		std::unique_ptr<Channel> channel_;
 	public:
-		explicit WSServerToken(const std::string& address, unsigned short port)
+		explicit WSServerToken(const char* address, unsigned short port)
 			: is_authenticated_(false)
+			, io_context_(nullptr)
+			, ssl_config_(nullptr)
+			, channel_(nullptr)
 		{
-			endpoint_.address(boost::asio::ip::make_address(address.c_str()));
+			endpoint_.address(boost::asio::ip::make_address(std::string(address)));
 			endpoint_.port(port);
 		}
 		virtual ~WSServerToken() {
@@ -68,10 +82,12 @@ namespace websocket {
 				return false;
 			}
 
-			boost::asio::ssl::context ctx{ boost::asio::ssl::context_base::tls_server };
-			ctx.use_certificate_file(R"(C:\Users\Rex\Documents\Visual Studio 2017\Projects\web_socket_server\dependency\host.crt)", boost::asio::ssl::context::file_format::pem);
-			ctx.use_rsa_private_key_file(R"(C:\Users\Rex\Documents\Visual Studio 2017\Projects\web_socket_server\dependency\host.key)", boost::asio::ssl::context::file_format::pem);
-			listener_->set_ssl_context(std::move(ctx));
+			if (ssl_config_) {
+				boost::asio::ssl::context ctx{ ssl_config_->method };
+				ctx.use_certificate_file(ssl_config_->certificate_file_path, ssl_config_->file_format);
+				ctx.use_rsa_private_key_file(ssl_config_->private_key_file_path, ssl_config_->file_format);
+				listener_->set_ssl_context(std::move(ctx));
+			}
 
 			listener_->set_handshake_completed_handler(
 				std::bind(&WSServerToken::on_client_join,
@@ -79,6 +95,7 @@ namespace websocket {
 
 			// Start to listen
 			listener_->run();
+			log("Server started!\tlisten port=%s!", endpoint_.port());
 		
 			// Enable work threads
 			thread_group_.create_thread_count(
@@ -89,12 +106,18 @@ namespace websocket {
 		}
 
 		void stop() {
-			io_context_->stop();
+			if (io_context_) {
+				io_context_->stop();
+			}
 			thread_group_.join_all();
 		}
 
-		void set_token(const std::string& token) {
+		void set_token(const char* token) {
 			token_ = token;
+		}
+
+		void set_ssl_config(const ssl_config& config) {
+			ssl_config_ = std::make_unique<ssl_config>(std::move(config));
 		}
 
 	private:

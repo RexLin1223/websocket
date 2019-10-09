@@ -80,9 +80,7 @@ namespace websocket {
 	void log(const char* fmt, T value, Targs... Fargs)
 	{
 		std::stringstream ss;
-		ss << GetNow();
 		templateLogImpl(ss, fmt, value, Fargs...);
-		ss << "\n";
 
 		log(ss.str());
 	}
