@@ -4,25 +4,33 @@
 #include "WSServerSession.h"
 
 namespace websocket {
-	class WSListener : public std::enable_shared_from_this<WSListener>
+	template<
+		typename server_session_type,
+		typename base_session_type>
+	class Listener 
+		: public std::enable_shared_from_this<Listener<server_session_type, base_session_type>>
 	{
 		boost::asio::io_context& ioc_;
 		boost::asio::ip::tcp::endpoint endpoint_;
 		std::unique_ptr<boost::asio::ip::tcp::acceptor> acceptor_;
+
 		std::shared_ptr<Channel> channel_;
 
-		OnConnectionCompleted<WSSession> accepted_handler_;
+		OnConnectionCompleted<base_session_type> accepted_handler_;
+
+		std::shared_ptr<boost::asio::ssl::context> ssl_context_;
 	public:
-		WSListener(
+		Listener(
 			boost::asio::io_context& ioc,
-			boost::asio::ip::tcp::endpoint endpoint)
+			const boost::asio::ip::tcp::endpoint& endpoint)
 			: ioc_(ioc)
 			, endpoint_(endpoint)
 			, acceptor_(new boost::asio::ip::tcp::acceptor(ioc))
+			, ssl_context_(nullptr)
 		{
 		}
 
-		virtual ~WSListener() {
+		virtual ~Listener() {
 			if (acceptor_) {
 				boost::system::error_code ec;
 				acceptor_->close(ec);
@@ -49,8 +57,12 @@ namespace websocket {
 			channel_ = channel;
 		}
 
-		void set_handshake_completed_handler(OnConnectionCompleted<WSSession>&& handler) {
+		void set_handshake_completed_handler(OnConnectionCompleted<base_session_type>&& handler) {
 			accepted_handler_ = std::move(handler);
+		}
+
+		void set_ssl_context(boost::asio::ssl::context&& context) {
+			ssl_context_ = std::make_shared<boost::asio::ssl::context>(std::move(context));
 		}
 
 	private:
@@ -98,8 +110,8 @@ namespace websocket {
 			acceptor_->async_accept(
 				boost::asio::make_strand(ioc_),
 				boost::beast::bind_front_handler(
-					&WSListener::on_accept,
-					shared_from_this()));
+					&Listener::on_accept,
+					Listener<server_session_type, base_session_type>::shared_from_this()));
 		}
 
 		void on_accept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket)
@@ -110,7 +122,7 @@ namespace websocket {
 			else {
 				log("Client connected!");
 				// Create the session and run it
-				auto session = std::make_shared<WSServerSession>(std::move(socket), ioc_);
+				auto session = std::make_shared<server_session_type>(std::move(socket), *ssl_context_, ioc_);
 				if (!session) {
 					return;
 				}
@@ -121,5 +133,11 @@ namespace websocket {
 			// Accept another connection
 			do_accept();
 		}
+
 	};
+		
+	/*
+	using ListenerTCP = Listener<server_tcp_session, tcp_session>;
+	using ListenerSSL = Listener<server_ssl_session, ssl_session>;
+	*/
 }

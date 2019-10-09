@@ -16,6 +16,10 @@
 #include <stdarg.h>
 #include <thread>
 
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define  _CRT_SECURE_NO_WARNINGS
+#endif
+
 namespace websocket {
 	// Time 
 	static std::string GetNow() {
@@ -233,5 +237,18 @@ namespace websocket {
 			}
 		}
 
+	};
+
+	class ClassReflection {
+		std::string type_name_;
+	protected:
+		ClassReflection() = delete;
+		explicit ClassReflection(const std::string& name)
+			:type_name_(name) {}
+		virtual ~ClassReflection() {}
+
+		std::string type_name() {
+			return type_name_;
+		}
 	};
 }

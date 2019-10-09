@@ -15,9 +15,14 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define BOOST_SPIRIT_THREADSAFE
 
+#include "server_certificate.hpp"
+
 #include <boost/beast/core.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/beast/websocket/ssl.hpp>
 #include <boost/asio/strand.hpp>
+
 #include <boost/date_time.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -38,9 +43,19 @@ namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
+namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 //------------------------------------------------------------------------------
+
+static std::string GetNowDate() {
+	auto now = std::chrono::system_clock::now();
+	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+	std::stringstream ss;
+	ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d");
+	return ss.str();
+}
 
 static std::string GetNow() {
 
@@ -55,9 +70,23 @@ static uint64_t GetNowEpoch() {
 	return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+void write_log(const std::string& log) {
+	std::string fileName = GetNowDate() + ".log";
+	std::ofstream ofs;
+	ofs.open(fileName.c_str(), std::ios::binary| std::ios::app, _SH_DENYWR);
+	if (ofs) {
+		ofs.write(log.c_str(), log.size());
+		ofs.close();
+	}
+}
+
 template<typename T>
 void custom_fail(char const* what, T& err) {
-	std::cerr << GetNow() << what << ": " << err.message() << "\n";
+	std::stringstream ss;
+	ss << GetNow() << what << ": " << err.message() << "\n";
+
+	std::cerr << ss.str();
+	write_log(ss.str());
 }
 
 // Report a failure
@@ -86,15 +115,22 @@ void custom_log(const char* fmt, T value, TArgs... args) {
 }
 
 void log(char const* content) {
-	std::cout << GetNow() << content << std::endl;
+	std::stringstream ss;
+	ss << GetNow() << content << std::endl;
+
+	std::cerr << ss.str();
+	write_log(ss.str());
 }
 
 void fail(char const* content) {
-	std::cout << GetNow();
-	custom_log("Error: %s\n", content);
+	std::stringstream ss;
+	ss << GetNow();
+	ss << "Error:"<< content;
+	ss << "\n";
+
+	std::cerr << ss.str();
+	write_log(ss.str());
 }
-
-
 
 // Echoes back all received WebSocket messages
 class session : public std::enable_shared_from_this<session>
@@ -125,7 +161,9 @@ class session : public std::enable_shared_from_this<session>
 		|<----------------->|
 		|					|
 	*/
-	websocket::stream<beast::tcp_stream> ws_;
+	websocket::stream<
+		beast::ssl_stream<beast::tcp_stream>> ws_;
+	//websocket::stream<beast::tcp_stream> ws_;
 	beast::flat_buffer read_buffer_;
 	std::string write_data_;
 
@@ -140,8 +178,8 @@ class session : public std::enable_shared_from_this<session>
 public:
 	// Take ownership of the socket
 	explicit
-		session(tcp::socket&& socket, boost::asio::io_context& ioc)
-		: ws_(std::move(socket))
+		session(tcp::socket&& socket, boost::asio::io_context& ioc, ssl::context& ctx)
+		: ws_(std::move(socket), ctx)
 		, io_cotext_(ioc)
 		, timer_(ioc)
 		, is_authenticated_(false)
@@ -151,12 +189,37 @@ public:
 
 	~session() {
 		timer_.cancel();
+
+		boost::system::error_code ec;
+		ws_.close(boost::beast::websocket::close_reason("manual shutdown"), ec);
+		if (ec) {
+			custom_fail("shutdown", ec);
+		}
 		log("Connection closed");
 	}
 
 	// Start the asynchronous operation
 	void run()
 	{
+		// Set the timeout.
+		beast::get_lowest_layer(ws_).expires_after(std::chrono::seconds(30));
+
+		// Perform the SSL handshake
+		ws_.next_layer().async_handshake(
+			ssl::stream_base::server,
+			beast::bind_front_handler(
+				&session::on_handshake,
+				shared_from_this()));
+	}
+
+	void on_handshake(beast::error_code ec) {
+		if (ec)
+			return beast_fail(ec, "handshake");
+
+		// Turn off the timeout on the tcp_stream, because
+		// the websocket stream has its own timeout system.
+		beast::get_lowest_layer(ws_).expires_never();
+
 		// Set suggested timeout settings for the websocket
 		ws_.set_option(
 			websocket::stream_base::timeout::suggested(
@@ -168,7 +231,7 @@ public:
 		{
 			res.set(http::field::server,
 				std::string(BOOST_BEAST_VERSION_STRING) +
-				" websocket-server-async");
+				" websocket-server-async-ssl");
 		}));
 
 		// Accept the websocket handshake
@@ -176,7 +239,6 @@ public:
 			beast::bind_front_handler(
 				&session::on_accept,
 				shared_from_this()));
-
 	}
 
 	void on_accept(beast::error_code ec)
@@ -320,6 +382,10 @@ public:
 			custom_fail("Invalid token format", ec);
 			do_write_response(400);
 		}
+		catch (boost::property_tree::ptree_error& ec) {
+			fail("Can't get token");
+			do_write_response(401);
+		}
 		// Clear the buffer
 		read_buffer_.consume(read_buffer_.size());
 	}
@@ -358,14 +424,17 @@ public:
 class listener : public std::enable_shared_from_this<listener>
 {
 	net::io_context& ioc_;
+	ssl::context& ctx_;
 	tcp::acceptor acceptor_;
 	tcp::endpoint endpoint_;
 
 public:
 	listener(
 		net::io_context& ioc,
+		ssl::context& ctx,
 		tcp::endpoint endpoint)
 		: ioc_(ioc)
+		, ctx_(ctx)
 		, acceptor_(ioc)
 		, endpoint_(endpoint)
 	{
@@ -443,7 +512,7 @@ private:
 		{
 			log("Client connected!");
 			// Create the session and run it
-			std::make_shared<session>(std::move(socket), ioc_)->run();
+			std::make_shared<session>(std::move(socket), ioc_, ctx_)->run();
 		}
 
 		// Accept another connection
@@ -494,8 +563,15 @@ int main(int argc, char* argv[])
 		// The io_context is required for all I/O
 		net::io_context ioc{ threads };
 
+		// The SSL context is required, and holds certificates
+		ssl::context ctx{ ssl::context::tlsv12_server };
+
+		// This holds the self-signed certificate used by the server
+		load_server_certificate(ctx);
+		//ctx.set_verify_mode(boost::asio::ssl::verify_none);
+
 		// Create and launch a listening port
-		auto ret = std::make_shared<listener>(ioc, tcp::endpoint{ address, static_cast<unsigned short>(port) })->run();
+		auto ret = std::make_shared<listener>(ioc, ctx, tcp::endpoint{ address, static_cast<unsigned short>(port) })->run();
 		if (!ret) {
 			fail("Listen port was used by other process");
 			return EXIT_FAILURE;

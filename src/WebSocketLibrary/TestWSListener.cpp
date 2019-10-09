@@ -1,10 +1,11 @@
-#include <WebSocketLib/WSListener.h>
-#include <gtest/gtest.h>
-/*
-class WSListenerDaemon : public testing::Test {
+#include "WSListener.h"
+using TCPListener = websocket::Listener<websocket::server_tcp_session, websocket::tcp_session>;
+using SSLListener = websocket::Listener<websocket::server_ssl_session, websocket::ssl_session>;
+
+class WSListenerDaemon {
 	boost::asio::io_context io_context_;
 	boost::asio::ip::tcp::endpoint endpoint_;
-	std::shared_ptr<websocket::WSListener> listener_;
+	std::shared_ptr<TCPListener> listener_;
 
 public:
 	void set_endpoint(const std::string& address, unsigned short port) {
@@ -14,7 +15,7 @@ public:
 
 	bool run() {
 		listener_.reset(
-			new websocket::WSListener(
+			new TCPListener(
 				io_context_, endpoint_));
 
 		if (!listener_) {
@@ -39,13 +40,7 @@ private:
 	}
 };
 
-TEST_F(WSListenerDaemon, TestRun) {
+int main() {
+	WSListenerDaemon d;
 
-	try {
-		set_endpoint("0.0.0.0", 8080);
-		run();
-	}
-	catch (std::exception& ex) {
-	}
 }
-*/

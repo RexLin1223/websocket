@@ -1,6 +1,9 @@
 #pragma once
-#include "WSListener.h"
+#include <WebSocketLibrary/WSListener.h>
 #include <functional>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 namespace websocket {
 
@@ -30,8 +33,10 @@ namespace websocket {
 		|<----------------->|
 		|					|
 	*/
-	class WSServer {
-		std::shared_ptr<WSListener> listener_;
+
+	template<typename server_session_type, typename base_session_type>
+	class WSServerToken{
+		std::shared_ptr<Listener<server_session_type, base_session_type>> listener_;
 		std::unique_ptr<boost::asio::io_context> io_context_;
 		boost::asio::ip::tcp::endpoint endpoint_;
 
@@ -41,13 +46,13 @@ namespace websocket {
 		ThreadGroup thread_group_;
 		std::unique_ptr<Channel> channel_;
 	public:
-		explicit WSServer(const std::string& address, unsigned short port)
+		explicit WSServerToken(const std::string& address, unsigned short port)
 			: is_authenticated_(false)
 		{
 			endpoint_.address(boost::asio::ip::make_address(address.c_str()));
 			endpoint_.port(port);
 		}
-		virtual ~WSServer() {
+		virtual ~WSServerToken() {
 			stop();
 		}
 
@@ -58,13 +63,18 @@ namespace websocket {
 				return false;
 			}
 
-			listener_ = std::make_shared<WSListener>(*io_context_, endpoint_);
+			listener_ = std::make_shared<Listener<server_session_type, base_session_type>>(*io_context_, endpoint_);
 			if (!listener_) {
 				return false;
 			}
 
+			boost::asio::ssl::context ctx{ boost::asio::ssl::context_base::tls_server };
+			ctx.use_certificate_file(R"(C:\Users\Rex\Documents\Visual Studio 2017\Projects\web_socket_server\dependency\host.crt)", boost::asio::ssl::context::file_format::pem);
+			ctx.use_rsa_private_key_file(R"(C:\Users\Rex\Documents\Visual Studio 2017\Projects\web_socket_server\dependency\host.key)", boost::asio::ssl::context::file_format::pem);
+			listener_->set_ssl_context(std::move(ctx));
+
 			listener_->set_handshake_completed_handler(
-				std::bind(&WSServer::on_client_join,
+				std::bind(&WSServerToken::on_client_join,
 					this, std::placeholders::_1));
 
 			// Start to listen
@@ -88,13 +98,13 @@ namespace websocket {
 		}
 
 	private:
-		void on_client_join(std::shared_ptr<WSSession> session) {
+		void on_client_join(std::shared_ptr<base_session_type> session) {
 			session->receive(std::move(
 				boost::beast::bind_front_handler(
-					&WSServer::on_read_token, this)));
+					&WSServerToken::on_read_token, this)));
 		}
 
-		void do_write_response(unsigned short status_code, std::shared_ptr<WSSession> session) {
+		void do_write_response(unsigned short status_code, std::shared_ptr<base_session_type> session) {
 			boost::property_tree::ptree tree;
 			switch (status_code) {
 			case 200:
@@ -114,7 +124,7 @@ namespace websocket {
 			boost::property_tree::json_parser::write_json(ss, tree);
 
 			session->send(std::move(ss.str()), 
-				std::bind(&WSServer::on_write_response, this,
+				std::bind(&WSServerToken::on_write_response, this,
 					std::placeholders::_1, std::placeholders::_2,
 					std::placeholders::_3));
 		}
@@ -123,7 +133,7 @@ namespace websocket {
 			boost::beast::error_code ec,
 			std::size_t bytes_transferred, 
 			std::string&& data,
-			std::shared_ptr<WSSession> session) {
+			std::shared_ptr<base_session_type> session) {
 
 			unsigned short status_code = 400;
 			try {
@@ -153,7 +163,7 @@ namespace websocket {
 		void on_write_response(
 			boost::beast::error_code ec,
 			std::size_t bytes_transferred,
-			std::shared_ptr<WSSession> session) {
+			std::shared_ptr<base_session_type> session) {
 			if (is_authenticated_) {
 				session->receive();
 			}
