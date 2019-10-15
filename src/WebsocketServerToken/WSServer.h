@@ -39,8 +39,8 @@ namespace websocket {
 		boost::asio::ssl::context_base::method method;
 
 		// certificate
-		const char* certificate_file_path;
-		const char* private_key_file_path;
+		std::string certificate_file_path;
+		std::string private_key_file_path;
 		boost::asio::ssl::context::file_format file_format;
 	};
 
@@ -57,15 +57,8 @@ namespace websocket {
 		ThreadGroup thread_group_;
 		std::unique_ptr<Channel> channel_;
 	public:
-		explicit WSServerToken(const char* address, unsigned short port)
-			: is_authenticated_(false)
-			, io_context_(nullptr)
-			, ssl_config_(nullptr)
-			, channel_(nullptr)
-		{
-			endpoint_.address(boost::asio::ip::make_address(std::string(address)));
-			endpoint_.port(port);
-		}
+		explicit WSServerToken()
+			: is_authenticated_(false) {}
 		virtual ~WSServerToken() {
 			stop();
 		}
@@ -111,12 +104,27 @@ namespace websocket {
 			}
 			thread_group_.join_all();
 		}
+		
+		void set_listener(const char* address, unsigned short port) {
+			endpoint_.address(boost::asio::ip::make_address(std::string(address)));
+			endpoint_.port(port);
+		}
 
 		void set_token(const char* token) {
 			token_ = token;
 		}
 
-		void set_ssl_config(const ssl_config& config) {
+		void set_ssl_config(int ssl_method, 
+			const char* certificate_file_path,
+			const char* private_key_file_path,
+			int file_format) {
+			ssl_config config{
+				static_cast<boost::asio::ssl::context_base::method>(ssl_method),
+				std::string(certificate_file_path),
+				std::string(private_key_file_path),
+				static_cast<boost::asio::ssl::context::file_format>(file_format)
+			};
+
 			ssl_config_ = std::make_unique<ssl_config>(std::move(config));
 		}
 
@@ -192,4 +200,7 @@ namespace websocket {
 			}
 		}
 	};
+
+	using TokenServer = WSServerToken<websocket::server_tcp_session, websocket::tcp_session>;
+	using TokenServerSSL = WSServerToken<websocket::server_ssl_session, websocket::ssl_session>;
 }

@@ -11,7 +11,7 @@ int main() {
 			"C:\\Users\\Rex\\Documents\\Visual Studio 2017\\Projects\\web_socket_server\\dependencies\\cert\\host.key",
 			boost::asio::ssl::context::file_format::pem
 		};
-		server.set_ssl_config(std::move(config));
+		//server.set_ssl_config(std::move(config));
 		server.start(1);
 
 		// Blocking at here

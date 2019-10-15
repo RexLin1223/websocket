@@ -7,11 +7,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExampleWebsocketClient", "s
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExampleWebsocketServer", "src\ExampleWebsocketServer\ExampleWebsocketServer.vcxproj", "{9D352CE8-DABB-49F3-9FA9-86497AF20F7B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebSocketClientToken", "src\WebSocketClientToken\WebSocketClientToken.vcxproj", "{4E95543D-ABCE-44F0-95BD-FAAC2342035E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebSocketTokenClient", "src\WebSocketClientToken\WebSocketClientToken.vcxproj", "{4E95543D-ABCE-44F0-95BD-FAAC2342035E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebsocketServerToken", "src\WebsocketServerToken\WebsocketServerToken.vcxproj", "{BBB9F7F7-ADE6-4F72-90B1-FAAF4A5FB865}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebsocketTokenServer", "src\WebsocketServerToken\WebsocketServerToken.vcxproj", "{BBB9F7F7-ADE6-4F72-90B1-FAAF4A5FB865}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WebSocketLibrary", "src\WebSocketLibrary\WebSocketLibrary.vcxproj", "{97527F91-BE2F-4A28-846F-5D37F394DF93}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dllTester", "dllTester\dllTester.vcxproj", "{D49C253F-C93D-44E8-8AE1-9742E4F73376}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,6 +63,14 @@ Global
 		{97527F91-BE2F-4A28-846F-5D37F394DF93}.Release|x64.Build.0 = Release|x64
 		{97527F91-BE2F-4A28-846F-5D37F394DF93}.Release|x86.ActiveCfg = Release|Win32
 		{97527F91-BE2F-4A28-846F-5D37F394DF93}.Release|x86.Build.0 = Release|Win32
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Debug|x64.ActiveCfg = Debug|x64
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Debug|x64.Build.0 = Debug|x64
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Debug|x86.ActiveCfg = Debug|Win32
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Debug|x86.Build.0 = Debug|Win32
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Release|x64.ActiveCfg = Release|x64
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Release|x64.Build.0 = Release|x64
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Release|x86.ActiveCfg = Release|Win32
+		{D49C253F-C93D-44E8-8AE1-9742E4F73376}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
