@@ -18,6 +18,7 @@ int main() {
 	auto setCertificate = (fnSetCertificate)(GetProcAddress(h, "SetCertificate"));
 	auto registerOnData = (fnRegisterOnData)(GetProcAddress(h, "RegisterOnData"));
 	auto startServer = (fnStart)(GetProcAddress(h, "Start"));
+	auto stopServer = (fnStop)(GetProcAddress(h, "Stop"));
 
 	bool is_ssl = false;
 	void* instance = createServer(is_ssl);
@@ -30,6 +31,7 @@ int main() {
 	bool ret = startServer(instance, 1);
 	int i;
 	std::cin >> i;
+	stopServer(instance);
 	deleteServer(instance);
 	FreeLibrary(h);
 }
