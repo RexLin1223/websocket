@@ -148,7 +148,7 @@ namespace websocket {
 		}
 	};
 
-	template<typename T> using CallbackHandler = std::function<void(const T& data)>;
+	template<typename T> using CallbackHandler = std::function<void(const T&)>;
 	template<typename T>
 	class MessageChannel {
 		std::shared_mutex  mutex_;
@@ -233,6 +233,12 @@ namespace websocket {
 				itor->join();
 				++itor;
 			}
+		}
+
+		void join_and_clear_all() {
+			join_all();
+			std::lock_guard<std::mutex> guard(mutex_);
+			threads_.clear();
 		}
 
 	};

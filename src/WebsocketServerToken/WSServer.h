@@ -1,6 +1,6 @@
 #pragma once
+#include "WSServerExport.h"
 #include <WebSocketLibrary/WSListener.h>
-#include <functional>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -45,20 +45,31 @@ namespace websocket {
 	};
 
 	template<typename server_session_type, typename base_session_type>
-	class WSServerToken{
+	class WSServerToken {
 		std::shared_ptr<Listener<server_session_type, base_session_type>> listener_;
 		std::unique_ptr<boost::asio::io_context> io_context_;
 		boost::asio::ip::tcp::endpoint endpoint_;
 
-		bool is_authenticated_;
-		std::string token_;
-		std::unique_ptr<ssl_config> ssl_config_;
-
 		ThreadGroup thread_group_;
-		std::unique_ptr<Channel> channel_;
+		
+		std::unique_ptr<ssl_config> ssl_config_;
+		std::shared_ptr<Channel> channel_;
+
+		std::string token_;
+		bool is_authenticated_;
+
+		OnData on_data_;
+		OnError on_error_;
+		OnJoin on_join_;
+		OnLeave on_leave_;
 	public:
 		explicit WSServerToken()
-			: is_authenticated_(false) {}
+			: is_authenticated_(false)
+			, on_data_(NULL)
+			, on_error_(NULL)
+			, on_join_(NULL)
+			, on_leave_(NULL) {
+		}
 		virtual ~WSServerToken() {
 			stop();
 		}
@@ -82,6 +93,12 @@ namespace websocket {
 				listener_->set_ssl_context(std::move(ctx));
 			}
 
+			channel_ = std::make_shared<Channel>();
+			if (channel_) {
+				channel_->subscribe(std::bind(&WSServerToken::on_received_data, this, std::placeholders::_1));
+				listener_->set_channel(channel_);
+			}
+
 			listener_->set_handshake_completed_handler(
 				std::bind(&WSServerToken::on_client_join,
 					this, std::placeholders::_1));
@@ -102,7 +119,7 @@ namespace websocket {
 			if (io_context_) {
 				io_context_->stop();
 			}
-			thread_group_.join_all();
+			thread_group_.join_and_clear_all();
 		}
 		
 		void set_listener(const char* address, unsigned short port) {
@@ -126,6 +143,21 @@ namespace websocket {
 			};
 
 			ssl_config_ = std::make_unique<ssl_config>(std::move(config));
+		}
+
+		void register_on_data(OnData on_data) {
+			on_data_ = on_data;
+		}
+
+		void register_on_error(OnError on_err) {
+			on_error_ = on_err;
+		}
+
+		void register_on_join(OnJoin on_join) {
+			on_join_ = on_join;
+		}
+		void register_on_leave(OnLeave on_leave) {
+			on_leave_ = on_leave;
 		}
 
 	private:
@@ -199,8 +231,14 @@ namespace websocket {
 				session->receive();
 			}
 		}
+
+		void on_received_data(const std::string& data) {
+			if (on_data_) {
+				on_data_(data.c_str(), data.size());
+			}
+		}
 	};
 
 	using TokenServer = WSServerToken<websocket::server_tcp_session, websocket::tcp_session>;
-	using TokenServerSSL = WSServerToken<websocket::server_ssl_session, websocket::ssl_session>;
+	using TokenSSLServer = WSServerToken<websocket::server_ssl_session, websocket::ssl_session>;
 }

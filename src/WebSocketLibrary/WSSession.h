@@ -133,19 +133,21 @@ namespace websocket {
 		void do_read() {
 			ws_.async_read(
 				read_buffer_,
-				[self = session_base<socket_type>::shared_from_this()](boost::beast::error_code ec,
-					std::size_t bytes_transferred) {
-				self->on_read(ec, bytes_transferred);
-			});
+				[self = session_base<socket_type>::shared_from_this()]
+				(boost::beast::error_code ec,
+				std::size_t bytes_transferred) {
+					self->on_read(ec, bytes_transferred);
+				});
 		}
 
 		void do_write() {
 			ws_.text(true);
 			ws_.async_write(
 				boost::asio::buffer(write_queue_.peek()),
-				[self = session_base<socket_type>::shared_from_this()](boost::beast::error_code ec,
-					std::size_t bytes_transferred) {
-				self->on_write(ec, bytes_transferred);
+				[self = session_base<socket_type>::shared_from_this()]
+				(boost::beast::error_code ec,
+				std::size_t bytes_transferred) {
+					self->on_write(ec, bytes_transferred);
 			});
 		}
 

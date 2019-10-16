@@ -21,16 +21,16 @@ extern "C" {
 		delete reinterpret_cast<TokenServerInterface*>(ptr);
 	}
 
-	WSSERVER_API void __cdecl RegisterOnConnected(void* ptr, OnConnected onConnected)
+	WSSERVER_API void __cdecl RegisterOnJoin(void* ptr, OnJoin onJoin)
 	{
 		if (!ptr) return;
-		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnConnected(onConnected);
+		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnJoin(onJoin);
 	}
 
-	WSSERVER_API void __cdecl RegisterOnDisconnected(void* ptr, OnDisconnected onDisconnected)
+	WSSERVER_API void __cdecl RegisterOnLeave(void* ptr, OnLeave onLeave)
 	{
 		if (!ptr) return;
-		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnDisconnected(onDisconnected);
+		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnLeave(onLeave);
 	}
 
 	WSSERVER_API void __cdecl RegisterOnData(void* ptr, OnData onData)
@@ -55,6 +55,12 @@ extern "C" {
 	{
 		if (!ptr) return;
 		reinterpret_cast<TokenServerInterface*>(ptr)->SetCertificate(certificate_file, private_key_file);
+	}
+
+	WSSERVER_API void __cdecl SetToken(void* ptr, const char* token)
+	{
+		if (!ptr) return;
+		reinterpret_cast<TokenServerInterface*>(ptr)->SetToken(token);
 	}
 
 	WSSERVER_API bool __cdecl Start(void* ptr, unsigned short requestThreads)
