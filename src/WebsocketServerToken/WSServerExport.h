@@ -12,14 +12,14 @@ extern "C" {
 	WSSERVER_API void* __cdecl CreateServerInstance(int is_ssl);
 	WSSERVER_API void __cdecl DestroyServerInstance(void* ptr);
 
-	typedef void(__cdecl *OnJoin)();
-	WSSERVER_API void __cdecl RegisterOnJoin(void* ptr, OnJoin onJoin);
-	typedef void(__cdecl *OnLeave)();
-	WSSERVER_API void __cdecl RegisterOnLeave(void* ptr, OnLeave onLeave);
-	typedef void(__cdecl *OnData)(const char*, unsigned int);
-	WSSERVER_API void __cdecl RegisterOnData(void* ptr, OnData onData);
-	typedef void(__cdecl *OnError)(int);
-	WSSERVER_API void __cdecl RegisterOnError(void* ptr, OnError onError);
+	typedef void(__cdecl *OnJoin)(void*);
+	WSSERVER_API void __cdecl RegisterOnJoin(void* ptr, OnJoin onJoin, void* classObject = 0);
+	typedef void(__cdecl *OnLeave)(void*);
+	WSSERVER_API void __cdecl RegisterOnLeave(void* ptr, OnLeave onLeave, void* classObject = 0);
+	typedef void(__cdecl *OnData)(const char*, unsigned int, void*);
+	WSSERVER_API void __cdecl RegisterOnData(void* ptr, OnData onData, void* classObject = 0);
+	typedef void(__cdecl *OnError)(int, void*);
+	WSSERVER_API void __cdecl RegisterOnError(void* ptr, OnError onError, void* classObject = 0);
 
 	WSSERVER_API void __cdecl SetListener(
 		void* ptr, const char* address, unsigned short port);
@@ -28,19 +28,19 @@ extern "C" {
 	WSSERVER_API void __cdecl SetToken(
 		void* ptr, const char* token);
 
-	WSSERVER_API bool __cdecl Start(void* ptr, unsigned short requestThreads);
+	WSSERVER_API int __cdecl Start(void* ptr, unsigned short requestThreads);
 	WSSERVER_API void __cdecl Stop(void* ptr);
 
 	typedef void*(__cdecl *fnCreateServerInstance)(int);
 	typedef void(__cdecl *fnDestroyServerInstance)(void*);
-	typedef void(__cdecl *fnRegisterOnJoin)(void*, OnJoin);
-	typedef void(__cdecl *fnRegisterOnLeave)(void*, OnLeave);
-	typedef void(__cdecl *fnRegisterOnData)(void*, OnData);
-	typedef void(__cdecl *fnRegisterOnError)(void*, OnError);
+	typedef void(__cdecl *fnRegisterOnJoin)(void*, OnJoin, void*);
+	typedef void(__cdecl *fnRegisterOnLeave)(void*, OnLeave, void*);
+	typedef void(__cdecl *fnRegisterOnData)(void*, OnData, void*);
+	typedef void(__cdecl *fnRegisterOnError)(void*, OnError, void*);
 	typedef void(__cdecl *fnSetListener)(void*, const char*, unsigned short);
 	typedef void(__cdecl *fnSetCertificate)(void*, const char*, const char*);
 	typedef void(__cdecl *fnSetToken)(void*, const char*);
-	typedef bool(__cdecl *fnStart)(void*, unsigned short);
+	typedef int(__cdecl *fnStart)(void*, unsigned short);
 	typedef void(__cdecl *fnStop)(void*);
 
 #ifdef __cplusplus

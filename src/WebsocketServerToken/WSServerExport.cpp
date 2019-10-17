@@ -20,29 +20,28 @@ extern "C" {
 		if (!ptr) return;
 		delete reinterpret_cast<TokenServerInterface*>(ptr);
 	}
-
-	WSSERVER_API void __cdecl RegisterOnJoin(void* ptr, OnJoin onJoin)
+	WSSERVER_API void __cdecl RegisterOnJoin(void* ptr, OnJoin onJoin, void* classObject /*= NULL*/)
 	{
 		if (!ptr) return;
-		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnJoin(onJoin);
+		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnJoin(onJoin, classObject);
 	}
 
-	WSSERVER_API void __cdecl RegisterOnLeave(void* ptr, OnLeave onLeave)
+	WSSERVER_API void __cdecl RegisterOnLeave(void* ptr, OnLeave onLeave, void* classObject /*= NULL*/)
 	{
 		if (!ptr) return;
-		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnLeave(onLeave);
+		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnLeave(onLeave, classObject);
 	}
 
-	WSSERVER_API void __cdecl RegisterOnData(void* ptr, OnData onData)
+	WSSERVER_API void __cdecl RegisterOnData(void* ptr, OnData onData, void* classObject /*= NULL*/)
 	{
 		if (!ptr) return;
-		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnData(onData);
+		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnData(onData, classObject);
 	}
 
-	WSSERVER_API void __cdecl RegisterOnError(void* ptr, OnError onError)
+	WSSERVER_API void __cdecl RegisterOnError(void* ptr, OnError onError, void* classObject /*= NULL*/)
 	{
 		if (!ptr) return;
-		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnError(onError);
+		reinterpret_cast<TokenServerInterface*>(ptr)->RegisterOnError(onError, classObject);
 	}
 
 	WSSERVER_API void __cdecl SetListener(void* ptr, const char* address, unsigned short port)
@@ -63,7 +62,7 @@ extern "C" {
 		reinterpret_cast<TokenServerInterface*>(ptr)->SetToken(token);
 	}
 
-	WSSERVER_API bool __cdecl Start(void* ptr, unsigned short requestThreads)
+	WSSERVER_API int __cdecl Start(void* ptr, unsigned short requestThreads)
 	{
 		if (!ptr) return false;
 		return reinterpret_cast<TokenServerInterface*>(ptr)->Start(requestThreads);

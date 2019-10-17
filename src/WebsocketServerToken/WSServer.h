@@ -59,9 +59,14 @@ namespace websocket {
 		bool is_authenticated_;
 
 		OnData on_data_;
+		void* on_data_object_;
 		OnError on_error_;
+		void* on_error_object_;
 		OnJoin on_join_;
+		void* on_join_object_;
 		OnLeave on_leave_;
+		void* on_leave_object_;
+		
 	public:
 		explicit WSServerToken()
 			: is_authenticated_(false)
@@ -145,19 +150,23 @@ namespace websocket {
 			ssl_config_ = std::make_unique<ssl_config>(std::move(config));
 		}
 
-		void register_on_data(OnData on_data) {
+		void register_on_data(OnData on_data, void* object) {
 			on_data_ = on_data;
+			on_data_object_ = object;
 		}
 
-		void register_on_error(OnError on_err) {
+		void register_on_error(OnError on_err, void* object) {
 			on_error_ = on_err;
+			on_error_object_ = object;
 		}
 
-		void register_on_join(OnJoin on_join) {
+		void register_on_join(OnJoin on_join, void* object) {
 			on_join_ = on_join;
+			on_join_object_ = object;
 		}
-		void register_on_leave(OnLeave on_leave) {
+		void register_on_leave(OnLeave on_leave, void* object) {
 			on_leave_ = on_leave;
+			on_leave_object_ = object;
 		}
 
 	private:
@@ -234,7 +243,7 @@ namespace websocket {
 
 		void on_received_data(const std::string& data) {
 			if (on_data_) {
-				on_data_(data.c_str(), data.size());
+				on_data_(data.c_str(), data.size(), on_data_object_);
 			}
 		}
 	};

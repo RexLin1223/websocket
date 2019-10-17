@@ -4,7 +4,7 @@
 
 typedef HANDLE (_cdecl *CreateServer)(const char*, unsigned short);
 typedef int (*DeleteServer)(HANDLE);
-void OnDataFunc(const char* data, unsigned int dataLen) {
+void OnDataFunc(const char* data, unsigned int dataLen, void* obj) {
 	std::string s(data, dataLen);
 	printf("!!!!Received data %s\n", s.c_str());
 }
@@ -27,7 +27,7 @@ int main() {
 	setCertificate(instance,
 		"C:\\Users\\Rex\\Documents\\Visual Studio 2017\\Projects\\web_socket_server\\dependencies\\cert\\host.crt",
 		"C:\\Users\\Rex\\Documents\\Visual Studio 2017\\Projects\\web_socket_server\\dependencies\\cert\\host.key");
-	registerOnData(instance, OnDataFunc);
+	registerOnData(instance, OnDataFunc, nullptr);
 	bool ret = startServer(instance, 1);
 	int i;
 	std::cin >> i;

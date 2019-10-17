@@ -16,10 +16,10 @@ namespace websocket {
 		bool Start(size_t requestThreads);
 		void Stop();
 
-		void RegisterOnJoin(OnJoin onJoin);
-		void RegisterOnLeave(OnLeave onLeave);
-		void RegisterOnData(OnData onData);
-		void RegisterOnError(OnError onError);
+		void RegisterOnJoin(OnJoin onJoin, void* classObject = nullptr);
+		void RegisterOnLeave(OnLeave onLeave, void* classObject = nullptr);
+		void RegisterOnData(OnData onData, void* classObject = nullptr);
+		void RegisterOnError(OnError onError, void* classObject = nullptr);
 
 		void SetToken(const char* token);
 		void SetListener(const char* address, unsigned short port);

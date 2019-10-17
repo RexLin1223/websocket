@@ -61,51 +61,51 @@ namespace websocket {
 		}
 	}
 
-	void TokenServerInterface::RegisterOnJoin(OnJoin onJoin)
+	void TokenServerInterface::RegisterOnJoin(OnJoin onJoin, void* classObject /*= nullptr*/)
 	{
 		if (!server_) return;
 
 		if (is_ssl_) {
-			reinterpret_cast<TokenSSLServer*>(server_)->register_on_join(onJoin);
+			reinterpret_cast<TokenSSLServer*>(server_)->register_on_join(onJoin, classObject);
 		}
 		else {
-			reinterpret_cast<TokenServer*>(server_)->register_on_join(onJoin);
+			reinterpret_cast<TokenServer*>(server_)->register_on_join(onJoin, classObject);
 		}
 	}
 
-	void TokenServerInterface::RegisterOnLeave(OnLeave onLeave)
+	void TokenServerInterface::RegisterOnLeave(OnLeave onLeave, void* classObject /*= nullptr*/)
 	{
 		if (!server_) return;
 
 		if (is_ssl_) {
-			reinterpret_cast<TokenSSLServer*>(server_)->register_on_leave(onLeave);
+			reinterpret_cast<TokenSSLServer*>(server_)->register_on_leave(onLeave, classObject);
 		}
 		else {
-			reinterpret_cast<TokenServer*>(server_)->register_on_leave(onLeave);
+			reinterpret_cast<TokenServer*>(server_)->register_on_leave(onLeave, classObject);
 		}
 	}
 
-	void TokenServerInterface::RegisterOnData(OnData onData)
+	void TokenServerInterface::RegisterOnData(OnData onData, void* classObject /*= nullptr*/)
 	{
 		if (!server_) return;
 
 		if (is_ssl_) {
-			reinterpret_cast<TokenSSLServer*>(server_)->register_on_data(onData);
+			reinterpret_cast<TokenSSLServer*>(server_)->register_on_data(onData, classObject);
 		}
 		else {
-			reinterpret_cast<TokenServer*>(server_)->register_on_data(onData);
+			reinterpret_cast<TokenServer*>(server_)->register_on_data(onData, classObject);
 		}
 	}
 
-	void TokenServerInterface::RegisterOnError(OnError onError)
+	void TokenServerInterface::RegisterOnError(OnError onError, void* classObject /*= nullptr*/)
 	{
 		if (!server_) return;
 
 		if (is_ssl_) {
-			reinterpret_cast<TokenSSLServer*>(server_)->register_on_error(onError);
+			reinterpret_cast<TokenSSLServer*>(server_)->register_on_error(onError, classObject);
 		}
 		else {
-			reinterpret_cast<TokenServer*>(server_)->register_on_error(onError);
+			reinterpret_cast<TokenServer*>(server_)->register_on_error(onError, classObject);
 		}
 	}
 
