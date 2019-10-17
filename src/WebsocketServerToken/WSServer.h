@@ -104,7 +104,7 @@ namespace websocket {
 					this, std::placeholders::_1));
 
 			// Start to listen
-			listener_->run();
+			if (!listener_->run()) return false;
 			log("Server started!\tlisten port=%s!", endpoint_.port());
 		
 			// Enable work threads
