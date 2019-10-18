@@ -47,3 +47,18 @@ extern "C" {
 }
 #endif
 
+#ifdef __cplusplus
+#include <functional>
+// Functor declaration
+typedef std::function<void* __cdecl(int)> CreateServerFunc;
+typedef std::function<void __cdecl(void*)> DestoryServerFunc;
+typedef std::function<void __cdecl(void*, OnJoin, void*)> RegisterOnJoinFunc;
+typedef std::function<void __cdecl(void*, OnLeave, void*)> RegisterOnLeaveFunc;
+typedef std::function<void __cdecl(void*, OnData, void*)> RegisterOnDataFunc;
+typedef std::function<void __cdecl(void*, OnError, void*)> RegisterOnErrorFunc;
+typedef std::function<void __cdecl(void*, const char*, unsigned short)> SetListenerFunc;
+typedef std::function<void __cdecl(void*, const char*, const char*)> SetCertificateFunc;
+typedef std::function<void __cdecl(void*, const char*)> SetTokenFunc;
+typedef std::function<int __cdecl(void*, unsigned short)> StartFunc;
+typedef std::function<void __cdecl(void*)> StopFunc;
+#endif
