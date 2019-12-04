@@ -21,9 +21,9 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{BBB9F7F7-ADE6-4F72-90B1-FAAF4A5FB865}</ProjectGuid>
-    <RootNamespace>WebsocketServerToken</RootNamespace>
+    <RootNamespace>WebsocketKeyServer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
-    <ProjectName>WebsocketTokenServer</ProjectName>
+    <ProjectName>WebsocketKeyServer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

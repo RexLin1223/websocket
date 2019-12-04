@@ -15,6 +15,7 @@
 #include <sstream>
 #include <stdarg.h>
 #include <thread>
+#include <fstream>
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define  _CRT_SECURE_NO_WARNINGS
@@ -31,6 +32,15 @@ namespace websocket {
 		return s;
 	}
 
+	static void writeLog(const std::string& log) {
+		std::ofstream ofs;
+		ofs.open("C:\\PTSLog\\log.txt", std::ios::binary | std::ios::app);
+		if (ofs&& ofs.is_open()) {
+			ofs.write(log.c_str(), log.size());
+		}
+		ofs.close();
+	}
+
 	static uint64_t GetNowEpoch() {
 		return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
@@ -39,11 +49,25 @@ namespace websocket {
 	template<typename T>
 	void exception_log(char const* category, T ec)
 	{
-		std::cerr << GetNow() << category << ": " << ec.message() << "\n";
+		std::stringstream ss;
+		ss << GetNow() << category << ": " << ec.message() << "\n";
+		ss.flush();
+
+		// output console
+		std::cerr << ss.str();
+		// output file
+		writeLog(ss.str());
 	}
 
 	static void log(const std::string& content) {
-		std::cout << GetNow() << content << std::endl;
+		std::stringstream ss;
+		ss << GetNow() << content << std::endl;
+		ss.flush();
+
+		// output console
+		std::cout << ss.str();
+		// output file
+		writeLog(ss.str());
 	}
 
 	/*

@@ -142,7 +142,7 @@ class session : public std::enable_shared_from_this<session>
 		|					|
 		|	    Open		|
 		|------------------>|
-		|    Send Token		|
+		|    Send Key		|
 		|------------------>|
 		|	Send Response	|
 		|<------------------|
@@ -248,8 +248,8 @@ public:
 
 		alive_check();
 
-		// Read first token message
-		do_read_token();
+		// Read first Key message
+		do_read_Key();
 	}
 
 	void do_read()
@@ -262,11 +262,11 @@ public:
 				shared_from_this()));
 	}
 
-	void do_read_token() {
+	void do_read_Key() {
 		ws_.async_read(
 			read_buffer_,
 			beast::bind_front_handler(
-				&session::on_read_token,
+				&session::on_read_Key,
 				shared_from_this()));
 	}
 
@@ -357,20 +357,20 @@ public:
 		do_read();
 	}
 
-	void on_read_token(
+	void on_read_Key(
 			beast::error_code ec,
 			std::size_t bytes_transferred) {
 		try {
-			// Check validation of token
+			// Check validation of Key
 			std::string data = beast::buffers_to_string(read_buffer_.data());
 
 			std::stringstream ss(data);
 			boost::property_tree::ptree pTree;
 			boost::property_tree::json_parser::read_json(ss, pTree);
 
-			std::string token = pTree.get<std::string>("token");
-			if (0 != token.compare(R"(C124654DE1458)")) {
-				fail("Invalid token");
+			std::string Key = pTree.get<std::string>("Key");
+			if (0 != Key.compare(R"(C124654DE1458)")) {
+				fail("Invalid Key");
 				do_write_response(401);
 			}
 			else {
@@ -379,11 +379,11 @@ public:
 			}
 		}
 		catch (boost::property_tree::json_parser::json_parser_error& ec) {
-			custom_fail("Invalid token format", ec);
+			custom_fail("Invalid Key format", ec);
 			do_write_response(400);
 		}
 		catch (boost::property_tree::ptree_error& ec) {
-			fail("Can't get token");
+			fail("Can't get Key");
 			do_write_response(401);
 		}
 		// Clear the buffer

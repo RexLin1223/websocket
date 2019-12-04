@@ -57,7 +57,6 @@ namespace websocket {
 
 		virtual ~session_base() {
 			timer_.cancel();
-			//shutdown();
 			log("Connection closed");
 		}
 
@@ -67,8 +66,11 @@ namespace websocket {
 		}
 
 		void shutdown(std::string&& reason) {
+			if (!ws_.is_open()) return;
+
 			boost::system::error_code ec;
-			ws_.close(boost::beast::websocket::close_reason(reason.c_str()), ec);	
+			get_lowest_layer(ws_).cancel();
+			ws_.close(boost::beast::websocket::close_reason(reason.c_str()), ec);
 			if (ec) {
 				exception_log("shutdown", ec);
 			}
@@ -253,6 +255,9 @@ namespace websocket {
 
 			// Clear the buffer
 			read_buffer_.consume(read_buffer_.size());
+
+			// Update message time
+			last_message_ = GetNowEpoch();
 
 			if (read_handler) {
 				read_handler(ec, bytes_transferred, std::move(received_data), session_base<socket_type>::shared_from_this());

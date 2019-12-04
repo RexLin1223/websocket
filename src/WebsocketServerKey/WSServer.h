@@ -14,7 +14,7 @@ namespace websocket {
 		|					|
 		|	    Open		|
 		|------------------>|
-		|    Send Token		|
+		|    Send Key		|
 		|------------------>|
 		|	Send Response	|
 		|<------------------|
@@ -45,7 +45,7 @@ namespace websocket {
 	};
 
 	template<typename server_session_type, typename base_session_type>
-	class WSServerToken {
+	class WSServerKey {
 		std::shared_ptr<Listener<server_session_type, base_session_type>> listener_;
 		std::unique_ptr<boost::asio::io_context> io_context_;
 		boost::asio::ip::tcp::endpoint endpoint_;
@@ -55,8 +55,7 @@ namespace websocket {
 		std::unique_ptr<ssl_config> ssl_config_;
 		std::shared_ptr<Channel> channel_;
 
-		std::string token_;
-		bool is_authenticated_;
+		std::string key_;
 
 		OnData on_data_;
 		void* on_data_object_;
@@ -66,16 +65,18 @@ namespace websocket {
 		void* on_join_object_;
 		OnLeave on_leave_;
 		void* on_leave_object_;
+		OnValidate on_validate_;
+		void* on_validate_object_;
 		
 	public:
-		explicit WSServerToken()
-			: is_authenticated_(false)
-			, on_data_(NULL)
+		explicit WSServerKey()
+			: on_data_(NULL)
 			, on_error_(NULL)
 			, on_join_(NULL)
-			, on_leave_(NULL) {
+			, on_leave_(NULL)
+			, on_validate_(NULL) {
 		}
-		virtual ~WSServerToken() {
+		virtual ~WSServerKey() {
 			stop();
 		}
 
@@ -100,12 +101,12 @@ namespace websocket {
 
 			channel_ = std::make_shared<Channel>();
 			if (channel_) {
-				channel_->subscribe(std::bind(&WSServerToken::on_received_data, this, std::placeholders::_1));
+				channel_->subscribe(std::bind(&WSServerKey::on_received_data, this, std::placeholders::_1));
 				listener_->set_channel(channel_);
 			}
 
 			listener_->set_handshake_completed_handler(
-				std::bind(&WSServerToken::on_client_join,
+				std::bind(&WSServerKey::on_client_join,
 					this, std::placeholders::_1));
 
 			// Start to listen
@@ -132,8 +133,8 @@ namespace websocket {
 			endpoint_.port(port);
 		}
 
-		void set_token(const char* token) {
-			token_ = token;
+		void set_key(const char* Key) {
+			key_ = Key;
 		}
 
 		void set_ssl_config(int ssl_method, 
@@ -169,15 +170,21 @@ namespace websocket {
 			on_leave_object_ = object;
 		}
 
+		void register_on_validate(OnValidate on_validate, void* object) {
+			on_validate_ = on_validate;
+			on_validate_object_ = object;
+		}
+
 	private:
 		void on_client_join(std::shared_ptr<base_session_type> session) {
 			session->receive(std::move(
 				boost::beast::bind_front_handler(
-					&WSServerToken::on_read_token, this)));
+					&WSServerKey::on_read_Key, this)));
 		}
 
-		void do_write_response(unsigned short status_code, std::shared_ptr<base_session_type> session) {
+		void do_write_response(unsigned short status_code, std::shared_ptr<base_session_type> session, const std::string& error) {
 			boost::property_tree::ptree tree;
+			bool is_error_occurred = false;
 			switch (status_code) {
 			case 200:
 				tree.add("status_code", "200");
@@ -186,59 +193,88 @@ namespace websocket {
 			case 401:
 				tree.add("status_code", "401");
 				tree.add("message", "Unauthorized");
+				if (!error.empty()) {
+					tree.add("error", error);
+				}
+				is_error_occurred = true;
 				break;
 			default:
 				tree.add("status_code", "400");
 				tree.add("message", "Bad Request");
+				if (!error.empty()) {
+					tree.add("error", error);
+				}
+				is_error_occurred = true;
 			}
 
 			std::stringstream ss;
 			boost::property_tree::json_parser::write_json(ss, tree);
 
 			session->send(std::move(ss.str()), 
-				std::bind(&WSServerToken::on_write_response, this,
-					std::placeholders::_1, std::placeholders::_2,
-					std::placeholders::_3));
+				[this, is_error_occurred](boost::beast::error_code ec,
+					std::size_t bytes_transferred,
+					std::shared_ptr<base_session_type> session) {
+				if (!is_error_occurred) {
+					session->receive(
+						std::bind(&WSServerKey::on_read, this,
+							std::placeholders::_1, std::placeholders::_2,
+							std::placeholders::_3, std::placeholders::_4));
+				}
+			});
 		}
 
-		void on_read_token(
+		void on_read_Key(
 			boost::beast::error_code ec,
 			std::size_t bytes_transferred, 
 			std::string&& data,
 			std::shared_ptr<base_session_type> session) {
 
 			unsigned short status_code = 400;
+			std::string error;
 			try {
 				std::stringstream ss(data);
 				boost::property_tree::ptree pTree;
-				boost::property_tree::json_parser::read_json(ss, pTree);
+				boost::property_tree::json_parser::read_json(ss, pTree);				
 
-				std::string token = pTree.get<std::string>("token");
-				if (token != token_) {
-					log("Invalid token");
+				std::string key = pTree.get<std::string>("key");
+				if (key != key_) {
+					log("Invalid Key");
+					error = "Invalid Key";
 					status_code = 401;
 				}
 				else {
 					status_code = 200;
-					is_authenticated_ = true;
 				}
 			}
 			catch (boost::property_tree::json_parser::json_parser_error& ec) {
-				exception_log("Invalid token format", ec);
+				exception_log("Invalid Key format", ec);
 			}
 			catch (std::exception& ec) {
-				log("Unknown exception in parse token JOSN, ec=%s", ec.what());
+				log("Unknown exception in parse Key JOSN, ec=%s", ec.what());
 			}
-			do_write_response(status_code, session);
+			do_write_response(status_code, session, error);
 		}
 
-		void on_write_response(
+		void on_read(
 			boost::beast::error_code ec,
-			std::size_t bytes_transferred,
+			std::size_t bytes_transferred, 
+			std::string&& read_data,
 			std::shared_ptr<base_session_type> session) {
-			if (is_authenticated_) {
-				session->receive();
+			if (on_validate_) {
+				unsigned int error_buffer_len = 1024;
+				char* error_buffer = new char[error_buffer_len];
+				size_t ret = on_validate_(read_data.c_str(), read_data.size(), error_buffer, error_buffer_len, on_validate_object_);
+				if (0 == ret) {
+					do_write_response(200, session,"");
+					on_received_data(read_data);
+				}
+				else {
+					do_write_response(400, session, std::string(error_buffer, ret));
+				}
+
+				delete error_buffer;
 			}
+
 		}
 
 		void on_received_data(const std::string& data) {
@@ -248,6 +284,6 @@ namespace websocket {
 		}
 	};
 
-	using TokenServer = WSServerToken<websocket::server_tcp_session, websocket::tcp_session>;
-	using TokenSSLServer = WSServerToken<websocket::server_ssl_session, websocket::ssl_session>;
+	using KeyServer = WSServerKey<websocket::server_tcp_session, websocket::tcp_session>;
+	using KeySSLServer = WSServerKey<websocket::server_ssl_session, websocket::ssl_session>;
 }

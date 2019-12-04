@@ -41,7 +41,7 @@ namespace websocket {
 				}
 
 				do_timer_work(std::bind(
-					&server_tcp_session::check_alive, this), 5);
+					&server_tcp_session::check_alive, this), 2);
 
 				handler(self);
 			});

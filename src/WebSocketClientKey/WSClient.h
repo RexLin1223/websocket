@@ -11,7 +11,7 @@
 		|					|
 		|	    Open		|
 		|------------------>|
-		|    Send Token		|
+		|    Send Key		|
 		|------------------>|
 		|	Send Response	|
 		|<------------------|
@@ -36,7 +36,7 @@ namespace websocket {
 		boost::asio::io_context io_context_;
 
 		bool is_connected_;
-		std::string token_;
+		std::string Key_;
 
 		std::shared_ptr<client_tcp_session> session_;
 
@@ -74,34 +74,34 @@ namespace websocket {
 			session_.reset();
 		}
 
-		void set_token(const std::string& token) {
-			token_ = token;
+		void set_Key(const std::string& Key) {
+			Key_ = Key;
 		}
 	private:
 		void on_handshake_completed(std::shared_ptr<tcp_session> session) {
-			session->send(get_token_message(),
-				std::bind(&WSClient::on_send_token, this,
+			session->send(get_Key_message(),
+				std::bind(&WSClient::on_send_Key, this,
 					std::placeholders::_1, 
 					std::placeholders::_2,
 					std::placeholders::_3));
 		}
 
-		void on_send_token(
+		void on_send_Key(
 			boost::beast::error_code ec, 
 			std::size_t bytes_transferred,
 			std::shared_ptr<tcp_session> session) {
 			if (ec) {
-				exception_log("send token", ec);
+				exception_log("send Key", ec);
 				disconnect();
 				return;
 			}
 		}
 
-		void on_token_response(boost::beast::error_code ec,
+		void on_Key_response(boost::beast::error_code ec,
 			std::size_t bytes_transferred,
 			std::string&& received_data,
 			std::shared_ptr<tcp_session> session) {
-			// Parse send token result
+			// Parse send Key result
 			boost::property_tree::ptree tree;
 			std::stringstream ss(received_data);
 			boost::property_tree::json_parser::read_json(ss, tree);
@@ -116,13 +116,13 @@ namespace websocket {
 				}
 			}
 			catch (...) {
-				log("parse token response fail");
+				log("parse Key response fail");
 			}
 		}
 
-		std::string get_token_message() {
+		std::string get_Key_message() {
 			boost::property_tree::ptree tree;
-			tree.add("token", token_);
+			tree.add("Key", Key_);
 
 			std::stringstream ss;
 			boost::property_tree::json_parser::write_json(ss, tree);

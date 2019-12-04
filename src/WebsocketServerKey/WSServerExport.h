@@ -20,13 +20,15 @@ extern "C" {
 	WSSERVER_API void __cdecl RegisterOnData(void* ptr, OnData onData, void* classObject = 0);
 	typedef void(__cdecl *OnError)(int, void*);
 	WSSERVER_API void __cdecl RegisterOnError(void* ptr, OnError onError, void* classObject = 0);
+	typedef int(__cdecl *OnValidate)(const char*, unsigned int, char*, unsigned int, void*);
+	WSSERVER_API void __cdecl RegisterOnValidate(void* ptr, OnValidate onValidate, void* classObject = 0);
 
 	WSSERVER_API void __cdecl SetListener(
 		void* ptr, const char* address, unsigned short port);
 	WSSERVER_API void __cdecl SetCertificate(
 		void* ptr, const char* certificate_file, const char* private_key_file);
-	WSSERVER_API void __cdecl SetToken(
-		void* ptr, const char* token);
+	WSSERVER_API void __cdecl SetKey(
+		void* ptr, const char* key);
 
 	WSSERVER_API int __cdecl Start(void* ptr, unsigned short requestThreads);
 	WSSERVER_API void __cdecl Stop(void* ptr);
@@ -37,9 +39,11 @@ extern "C" {
 	typedef void(__cdecl *fnRegisterOnLeave)(void*, OnLeave, void*);
 	typedef void(__cdecl *fnRegisterOnData)(void*, OnData, void*);
 	typedef void(__cdecl *fnRegisterOnError)(void*, OnError, void*);
+	typedef void(__cdecl *fnRegisterOnValidate)(void*, OnValidate, void*);
+
 	typedef void(__cdecl *fnSetListener)(void*, const char*, unsigned short);
 	typedef void(__cdecl *fnSetCertificate)(void*, const char*, const char*);
-	typedef void(__cdecl *fnSetToken)(void*, const char*);
+	typedef void(__cdecl *fnSetKey)(void*, const char*);
 	typedef int(__cdecl *fnStart)(void*, unsigned short);
 	typedef void(__cdecl *fnStop)(void*);
 
@@ -56,9 +60,10 @@ typedef std::function<void __cdecl(void*, OnJoin, void*)> RegisterOnJoinFunc;
 typedef std::function<void __cdecl(void*, OnLeave, void*)> RegisterOnLeaveFunc;
 typedef std::function<void __cdecl(void*, OnData, void*)> RegisterOnDataFunc;
 typedef std::function<void __cdecl(void*, OnError, void*)> RegisterOnErrorFunc;
+typedef std::function<void __cdecl(void*, OnValidate, void*)> RegisterOnValidateFunc;
 typedef std::function<void __cdecl(void*, const char*, unsigned short)> SetListenerFunc;
 typedef std::function<void __cdecl(void*, const char*, const char*)> SetCertificateFunc;
-typedef std::function<void __cdecl(void*, const char*)> SetTokenFunc;
+typedef std::function<void __cdecl(void*, const char*)> SetKeyFunc;
 typedef std::function<int __cdecl(void*, unsigned short)> StartFunc;
 typedef std::function<void __cdecl(void*)> StopFunc;
 #endif
