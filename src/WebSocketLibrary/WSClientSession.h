@@ -99,7 +99,7 @@ namespace websocket {
 					return;
 				}
 
-				send(boost::lexical_cast<std::string>(GetNowEpoch()));
+				send(boost::lexical_cast<std::string>(get_now_epoch()));
 				do_send_alive();
 			});
 		}

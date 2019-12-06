@@ -49,7 +49,7 @@ namespace websocket {
 
 	private:
 		bool check_alive() {
-			if (GetNowEpoch() - last_message_ >= 15) {
+			if (get_now_epoch() - last_message_ >= 15) {
 				shutdown("time out");
 				return false;
 			}
@@ -134,7 +134,7 @@ namespace websocket {
 		}
 
 		bool check_alive() {
-			if (GetNowEpoch() - last_message_ >= 15) {
+			if (get_now_epoch() - last_message_ >= 15) {
 				shutdown("time out");
 				return false;
 			}

@@ -18,7 +18,7 @@ void OnDataFunc(const char* data, unsigned int dataLen, void* obj) {
 	ofs.close();
 }
 
-unsigned int OnValidateFunc(
+int OnValidateFunc(
 	const char* data, 
 	unsigned int dataLen, 
 	char* error_buffer, 
@@ -113,6 +113,15 @@ unsigned int OnValidateFunc(
 			memcpy(error_buffer, error.c_str(), error.size());
 		}
 	}
+	std::ofstream ofs;
+	ofs.open("C:\\PTSLog\\output.txt", std::ios::binary | std::ios::app);
+	if (ofs && ofs.is_open()) {
+		std::string log = "Validate format, error=";
+		log += error;
+		ofs.write(log.c_str(), log.size());
+		ofs.write("\r\n", 1);
+	}
+
 	return error.size();
 }
 

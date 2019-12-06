@@ -31,7 +31,7 @@ namespace websocket {
 			: ws_(std::move(socket))
 			, io_context_(ioc)
 			, timer_(ioc)
-			, last_message_(GetNowEpoch())
+			, last_message_(get_now_epoch())
 		{
 		}
 
@@ -42,7 +42,7 @@ namespace websocket {
 			: ws_(std::move(socket), ctx)
 			, io_context_(ioc)
 			, timer_(ioc)
-			, last_message_(GetNowEpoch())
+			, last_message_(get_now_epoch())
 		{
 		}
 
@@ -51,7 +51,7 @@ namespace websocket {
 			: ws_(boost::asio::make_strand(ioc))
 			, io_context_(ioc)
 			, timer_(ioc)
-			, last_message_(GetNowEpoch())
+			, last_message_(get_now_epoch())
 		{
 		}
 
@@ -180,7 +180,7 @@ namespace websocket {
 			read_buffer_.consume(read_buffer_.size());
 
 			// Update message time
-			last_message_ = GetNowEpoch();
+			last_message_ = get_now_epoch();
 
 			// read next
 			auto self(session_base<socket_type>::shared_from_this());
@@ -251,13 +251,12 @@ namespace websocket {
 			}
 
 			std::string received_data = boost::beast::buffers_to_string(read_buffer_.data());
-			log(received_data.c_str());
 
 			// Clear the buffer
 			read_buffer_.consume(read_buffer_.size());
 
 			// Update message time
-			last_message_ = GetNowEpoch();
+			last_message_ = get_now_epoch();
 
 			if (read_handler) {
 				read_handler(ec, bytes_transferred, std::move(received_data), session_base<socket_type>::shared_from_this());

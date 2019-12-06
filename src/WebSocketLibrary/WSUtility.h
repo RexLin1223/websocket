@@ -17,14 +17,55 @@
 #include <thread>
 #include <fstream>
 
+#include <filesystem>
+#include <system_error>
+
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define  _CRT_SECURE_NO_WARNINGS
 #endif
 
 namespace websocket {
-	// Time 
-	static std::string GetNow() {
+	// Filesystem
+	static std::wstring GetCurrentPath() {
+		return std::filesystem::current_path().wstring();
+	}
 
+	static bool IsDirectoryExists(const std::wstring& path) {
+		return std::filesystem::exists(path);
+	}
+	
+	static bool CreateDirectory(const std::wstring& path) {
+		if (IsDirectoryExists(path)) {
+			return true;
+		}
+
+		std::error_code ec;
+		if (std::filesystem::create_directory(path, ec) && ec) {
+			return true;
+		}
+
+		if (ec) {
+			std::cout << "Create director failed, error=" << ec.message() << std::endl;
+		}
+
+		return false;
+	}
+
+	static std::wstring GetLogFilePath() {
+		// Create log folder and file
+		auto path = GetCurrentPath();
+		path += L"\\log\\";
+
+		if (IsDirectoryExists(path) || CreateDirectory(path)) {
+			return path + L"WebSocket.log";
+		}
+		else {
+			return L"";
+		}
+	}
+
+	// Time 
+	static std::string get_now() {
 		std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 		std::string s(24, '\0');
 		std::strftime(&s[0], s.size(), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
@@ -34,14 +75,14 @@ namespace websocket {
 
 	static void writeLog(const std::string& log) {
 		std::ofstream ofs;
-		ofs.open("C:\\PTSLog\\log.txt", std::ios::binary | std::ios::app);
+		ofs.open(GetLogFilePath(), std::ios::binary | std::ios::app);
 		if (ofs&& ofs.is_open()) {
 			ofs.write(log.c_str(), log.size());
 		}
 		ofs.close();
 	}
 
-	static uint64_t GetNowEpoch() {
+	static uint64_t get_now_epoch() {
 		return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 
@@ -50,7 +91,7 @@ namespace websocket {
 	void exception_log(char const* category, T ec)
 	{
 		std::stringstream ss;
-		ss << GetNow() << category << ": " << ec.message() << "\n";
+		ss << get_now() << category << ": " << ec.message() << std::endl;
 		ss.flush();
 
 		// output console
@@ -61,7 +102,7 @@ namespace websocket {
 
 	static void log(const std::string& content) {
 		std::stringstream ss;
-		ss << GetNow() << content << std::endl;
+		ss << get_now() << content << std::endl;
 		ss.flush();
 
 		// output console
@@ -109,6 +150,7 @@ namespace websocket {
 		log(ss.str());
 	}
 
+	// Container
 	template<typename T>
 	class LockQueue {
 		std::mutex mutex_;
