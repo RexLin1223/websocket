@@ -189,7 +189,7 @@ namespace websocket {
 			case 200:
 				tree.add("status_code", "200");
 				tree.add("message", "OK");
-				log("Send response = %s", "200 OK");
+				log_debug("Send response = 200 OK");
 				break;
 			case 401:
 				tree.add("status_code", "401");
@@ -198,7 +198,7 @@ namespace websocket {
 					tree.add("error", error);
 				}
 				is_error_occurred = true;
-				log("Send response = %s", "401 Unauthorized");
+				log_debug("Send response = 401 Unauthorized");
 				break;
 			default:
 				tree.add("status_code", "400");
@@ -207,7 +207,7 @@ namespace websocket {
 					tree.add("error", error);
 				}
 				is_error_occurred = true;
-				log("Send response = %s", "400 Request");
+				log_debug("Send response = 400 Request");
 			}
 
 			std::stringstream ss;
@@ -221,7 +221,7 @@ namespace websocket {
 					exception_log("Send response", ec);
 					return;
 				}
-				log("Send response Done");
+				log_debug("Send response Done");
 				if (!is_error_occurred) {
 					session->receive(
 						std::bind(&WSServerKey::on_read, this,

@@ -170,7 +170,7 @@ namespace websocket {
 			}
 
 			std::string received_data = boost::beast::buffers_to_string(read_buffer_.data());
-			log(received_data.c_str());
+			log_debug(received_data.c_str());
 
 			if (channel_) {
 				channel_->broadcast(std::move(received_data));
@@ -254,6 +254,8 @@ namespace websocket {
 
 			// Clear the buffer
 			read_buffer_.consume(read_buffer_.size());
+
+			log_debug(received_data);
 
 			// Update message time
 			last_message_ = get_now_epoch();

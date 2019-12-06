@@ -51,12 +51,12 @@ namespace websocket {
 		return false;
 	}
 
-	static std::wstring GetLogFilePath() {
+	static std::wstring GetLogFilePath(bool is_debug = false) {
 		// Create log folder and file
 		auto path = GetCurrentPath();
-		path += L"\\log\\";
+		path += is_debug ? L"\\debug_log\\" : L"\\log\\";
 
-		if (IsDirectoryExists(path) || CreateDirectory(path)) {
+		if (IsDirectoryExists(path) || (!is_debug && CreateDirectory(path))) {
 			return path + L"WebSocket.log";
 		}
 		else {
@@ -73,9 +73,9 @@ namespace websocket {
 		return s;
 	}
 
-	static void writeLog(const std::string& log) {
+	static void writeLog(const std::string& log, bool is_debug = false) {
 		std::ofstream ofs;
-		ofs.open(GetLogFilePath(), std::ios::binary | std::ios::app);
+		ofs.open(GetLogFilePath(is_debug), std::ios::binary | std::ios::app);
 		if (ofs&& ofs.is_open()) {
 			ofs.write(log.c_str(), log.size());
 		}
@@ -111,6 +111,16 @@ namespace websocket {
 		writeLog(ss.str());
 	}
 
+	static void log_debug(const std::string& content) {
+		std::stringstream ss;
+		ss << get_now() << content << std::endl;
+		ss.flush();
+
+		// output console
+		std::cout << ss.str();
+		// output file
+		writeLog(ss.str(), true);
+	}
 	/*
 	// Variadic functions
 	void log(const char* fmt, ...) {
