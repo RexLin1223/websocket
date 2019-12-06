@@ -57,7 +57,7 @@ namespace websocket {
 
 		virtual ~session_base() {
 			timer_.cancel();
-			log("Connection closed");
+			log_debug("Connection closed");
 		}
 
 	public:

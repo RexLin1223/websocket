@@ -121,7 +121,7 @@ namespace websocket {
 				exception_log("on_accept", ec);
 			}
 			else {
-				log("Client connected!");
+				log_debug("Client connected!");
 				// Create the session and run it
 				auto session = std::make_shared<server_session_type>(std::move(socket), *ssl_context_, ioc_);
 				if (!session) {
