@@ -1,7 +1,7 @@
 #pragma once
-#include "WSUtility.h"
 #include "WSDefinition.h"
 #include "WSServerSession.h"
+#include "WSUtility.h"
 
 namespace websocket {
 	template<

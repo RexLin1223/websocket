@@ -1,11 +1,11 @@
-#include "WSUtility.h"
-#include "WSDefinition.h"
-
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/ssl.hpp>
 #include <boost/asio.hpp>
+
+#include "WSUtility.h"
+#include "WSDefinition.h"
 
 namespace websocket {
 	template<typename socket_type>

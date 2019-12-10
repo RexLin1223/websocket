@@ -20,20 +20,34 @@
 #include <filesystem>
 #include <system_error>
 
+#if defined(WIN32) || defined(WIN64)
+#include <Windows.h>
+#endif
+
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define  _CRT_SECURE_NO_WARNINGS
 #endif
 
 namespace websocket {
 	// Filesystem
+#if defined(WIN32) || defined(WIN64)
 	static std::wstring GetCurrentPath() {
-		return std::filesystem::current_path().wstring();
+		wchar_t buffer[MAX_PATH];
+		size_t path_len = GetModuleFileNameW(NULL, buffer, MAX_PATH);
+		if (path_len== 0) {
+			return L"";
+		}
+		std::wstring ws(buffer, path_len);
+		if (auto pos = ws.rfind(L"\\")) {
+			ws = ws.substr(0, pos + 1);
+		}
+		return ws;
 	}
 
 	static bool IsDirectoryExists(const std::wstring& path) {
 		return std::filesystem::exists(path);
 	}
-	
+
 	static bool CreateDirectory(const std::wstring& path) {
 		if (IsDirectoryExists(path)) {
 			return true;
@@ -63,6 +77,46 @@ namespace websocket {
 			return L"";
 		}
 	}
+
+#else
+	static std::string GetCurrentPath() {
+		return std::filesystem::current_path().string();
+	}
+
+	static bool IsDirectoryExists(const std::string& path) {
+		return std::filesystem::exists(path);
+	}
+
+	static bool CreateDirectory(const std::string& path) {
+		if (IsDirectoryExists(path)) {
+			return true;
+		}
+
+		std::error_code ec;
+		if (std::filesystem::create_directory(path, ec) && ec) {
+			return true;
+		}
+
+		if (ec) {
+			std::cout << "Create director failed, error=" << ec.message() << std::endl;
+		}
+
+		return false;
+	}
+
+	static std::string GetLogFilePath(bool is_debug = false) {
+		// Create log folder and file
+		auto path = GetCurrentPath();
+		path += is_debug ? "\\debug_log\\" : "\\log\\";
+
+		if (IsDirectoryExists(path) || (!is_debug && CreateDirectory(path))) {
+			return path + "WebSocket.log";
+		}
+		else {
+			return "";
+		}
+	}
+#endif
 
 	// Time 
 	static std::string get_now() {
