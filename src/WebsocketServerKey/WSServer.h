@@ -122,10 +122,17 @@ namespace websocket {
 		}
 
 		void stop() {
+			if (listener_) {
+				listener_->stop();
+			}
 			if (io_context_) {
 				io_context_->stop();
 			}
 			thread_group_.join_and_clear_all();
+			
+			listener_.reset();
+			ssl_config_.reset();
+			channel_.reset();
 		}
 		
 		void set_listener(const char* address, unsigned short port) {

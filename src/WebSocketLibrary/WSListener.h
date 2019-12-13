@@ -30,16 +30,10 @@ namespace websocket {
 		{
 		}
 
-		virtual ~Listener() {
-			if (acceptor_) {
-				boost::system::error_code ec;
-				acceptor_->close(ec);
-				if (ec) {
-					exception_log("acceptor close", ec);
-				}
-			}
-
+		~Listener() {
+			stop();
 			acceptor_.reset();
+			channel_.reset();
 		}
 
 		// Start accepting incoming connections
@@ -53,7 +47,23 @@ namespace websocket {
 			return true;
 		}
 
-		void set_channel(std::shared_ptr<Channel> channel) {
+		void stop() {
+			if (acceptor_) {
+				boost::system::error_code ec;
+				acceptor_->cancel(ec);
+				if (ec) {
+					exception_log("acceptor close", ec);
+					return;
+				}
+				acceptor_->close(ec);
+				if (ec) {
+					exception_log("acceptor close", ec);
+					return;
+				}
+			}
+		}
+
+		void set_channel(std::shared_ptr<Channel> channel) {	
 			channel_ = channel;
 		}
 
@@ -119,6 +129,7 @@ namespace websocket {
 		{
 			if (ec) {
 				exception_log("on_accept", ec);
+				return;
 			}
 			else {
 				log_debug("Client connected!");
